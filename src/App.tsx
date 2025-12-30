@@ -1,12 +1,5 @@
-import "./index.css";
+import AppShell from "./app/AppShell";
 
-function App() {
-  return (
-    <div className="app">
-      <h1>Vite + React + TypeScript</h1>
-      <p>Get started by editing src/App.tsx</p>
-    </div>
-  );
+export default function App() {
+  return <AppShell />;
 }
-
-export default App;
