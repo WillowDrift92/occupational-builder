@@ -1,10 +1,56 @@
-.app-shell {
+.ob-root {
+  height: 100vh;
+  width: 100vw;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: #f7f7f9;
+  background: #f6f7fb;
   color: #1f2933;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.ob-top {
+  flex: 0 0 auto;
+  padding: 16px;
+}
+
+.ob-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  gap: 16px;
+  padding: 0 16px 16px 16px;
+}
+
+.ob-top,
+.ob-main {
+  width: min(1600px, calc(100vw - 32px));
+  margin: 0 auto;
+}
+
+.ob-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ob-left,
+.ob-right {
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.ob-center {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  display: flex;
 }
 
 .top-bar {
@@ -13,7 +59,8 @@
   justify-content: space-between;
   padding: 12px 16px;
   background: #ffffff;
-  border-bottom: 1px solid #e1e4e8;
+  border: 1px solid #e1e4e8;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -50,35 +97,6 @@
   outline-offset: 2px;
 }
 
-.app-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 280px 1fr 340px;
-  gap: 12px;
-  padding: 12px;
-  min-height: 0;
-}
-
-.panel,
-.canvas-panel {
-  background: #ffffff;
-  border: 1px solid #e1e4e8;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  padding: 12px;
-}
-
-.canvas-panel {
-  display: flex;
-  min-height: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-.ob-canvasPanel {
-  min-height: 480px;
-}
-
 .toolbox {
   display: flex;
   flex-direction: column;
@@ -110,27 +128,23 @@
 .canvas-placeholder {
   display: grid;
   place-items: center;
-  min-height: 400px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
   color: #6b7280;
   font-weight: 700;
   border: 2px dashed #d0d7de;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #f9fafb;
 }
 
-.canvas-viewport {
-  flex: 1;
+.ob-canvasHost {
   width: 100%;
   height: 100%;
-  background: #f8fafc;
   min-height: 0;
-}
-
-.ob-canvasHost {
   position: relative;
   display: flex;
   flex: 1;
-  min-height: 0;
 }
 
 .inspector {
@@ -147,4 +161,23 @@
 .inspector__content {
   color: #6b7280;
   font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .ob-main {
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ob-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .ob-left,
+  .ob-right,
+  .ob-center {
+    height: auto;
+  }
 }

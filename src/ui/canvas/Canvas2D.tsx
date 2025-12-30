@@ -13,41 +13,51 @@ export default function Canvas2D() {
 
   useEffect(() => {
     const node = containerRef.current;
-
     if (!node) {
       return;
     }
 
-    const updateSize = () => {
-      const rect = node.getBoundingClientRect();
-      setSize((current) => {
-        if (current.width === rect.width && current.height === rect.height) {
-          return current;
-        }
+    let frame: number | null = null;
 
-        return {
-          width: rect.width,
-          height: rect.height,
-        };
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
+
+      frame = requestAnimationFrame(() => {
+        const { width, height } = entry.contentRect;
+
+        setSize((current) => {
+          const next = {
+            width: Math.floor(width),
+            height: Math.floor(height),
+          };
+
+          if (current.width === next.width && current.height === next.height) {
+            return current;
+          }
+
+          return next;
+        });
       });
-    };
+    });
 
-    updateSize();
-
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(node);
-    window.addEventListener("resize", updateSize);
+    resizeObserver.observe(node);
 
     return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateSize);
+      resizeObserver.disconnect();
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
     };
   }, []);
 
   const hasSize = size.width > 0 && size.height > 0;
 
   return (
-    <div className="canvas-viewport ob-canvasHost" ref={containerRef}>
+    <div className="ob-canvasHost" ref={containerRef}>
       {hasSize ? (
         <Stage width={size.width} height={size.height} listening={false}>
           <Layer listening={false}>
