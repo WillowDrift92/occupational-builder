@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
-import { Object2D, PlatformObj, RampObj, Tool } from "../../model/types";
+import { ActiveTool, Object2D, PlatformObj, RampObj } from "../../model/types";
 import { newPlatformAt, newRampAt } from "../../model/defaults";
 import Grid2D from "./Grid2D";
 import ShapePlatform2D from "./ShapePlatform2D";
@@ -19,16 +19,16 @@ type CanvasSize = {
 };
 
 type Canvas2DProps = {
-  activeTool: Tool;
+  activeTool: ActiveTool;
   snapOn: boolean;
   objects: Object2D[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClearSelection: () => void;
-  onPlaceAt: (tool: Tool, xMm: number, yMm: number) => void;
+  onPlaceAt: (tool: Exclude<ActiveTool, null>, xMm: number, yMm: number) => void;
   onUpdateObject: (id: string, updater: (obj: Object2D) => Object2D) => void;
   onDeleteObject: (id: string) => void;
-  onSetActiveTool: (tool: Tool) => void;
+  onSetActiveTool: (tool: ActiveTool) => void;
 };
 
 type PointerState = { x: number; y: number } | null;
@@ -166,15 +166,14 @@ export default function Canvas2D({
 
   const handleContextMenu = (evt: any) => {
     evt.evt.preventDefault();
-    if (activeTool !== "move") {
-      onSetActiveTool("move");
-    }
+    onSetActiveTool(null);
   };
 
   const handleObjectPointerDown = (evt: any, obj: Object2D) => {
     onSelect(obj.id);
     if (activeTool === "delete") {
       onDeleteObject(obj.id);
+      onSetActiveTool(null);
     }
     evt.cancelBubble = true;
   };
@@ -197,7 +196,7 @@ export default function Canvas2D({
   const objectNodes = objects.map((obj) => {
     const isSelected = obj.id === selectedId;
     const isHover = obj.id === hoverId;
-    const draggable = activeTool === "move" && !obj.locked;
+    const draggable = activeTool !== "delete" && !obj.locked;
     const hoverHandlers = {
       onMouseEnter: () => setHoverId(obj.id),
       onMouseLeave: () => setHoverId((current) => (current === obj.id ? null : current)),
@@ -231,7 +230,7 @@ export default function Canvas2D({
   });
 
   return (
-    <div className="ob-canvasHost" ref={containerRef} data-tool={activeTool}>
+    <div className="ob-canvasHost" ref={containerRef} data-tool={activeTool ?? "none"}>
       {hasSize ? (
         <Stage
           ref={stageRef}
