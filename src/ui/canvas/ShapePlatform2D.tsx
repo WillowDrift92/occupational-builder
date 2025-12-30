@@ -1,11 +1,11 @@
 import { Group, Rect, Text } from "react-konva";
-import { ActiveTool, PlatformObj } from "../../model/types";
+import { PlatformObj, Tool } from "../../model/types";
 
 type Props = {
   obj: PlatformObj;
   selected: boolean;
   hover: boolean;
-  activeTool: ActiveTool;
+  activeTool: Tool;
   draggable: boolean;
   ghost?: boolean;
   mmToPx: (mm: number) => number;
@@ -30,17 +30,6 @@ export default function ShapePlatform2D({
 }: Props) {
   const widthPx = mmToPx(obj.lengthMm);
   const heightPx = mmToPx(obj.widthMm);
-  const rotationRad = (obj.rotationDeg * Math.PI) / 180;
-  const cos = Math.cos(rotationRad);
-  const sin = Math.sin(rotationRad);
-  const labelOffset = {
-    x: -widthPx / 2 + 8,
-    y: -heightPx / 2 + 6,
-  };
-  const rotatedLabel = {
-    x: labelOffset.x * cos - labelOffset.y * sin,
-    y: labelOffset.x * sin + labelOffset.y * cos,
-  };
   const fill = ghost ? "rgba(16,185,129,0.25)" : "#e8f5e9";
   const stroke =
     activeTool === "delete" && hover
@@ -61,26 +50,25 @@ export default function ShapePlatform2D({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onDragEnd={onDragEnd}
+      offsetX={widthPx / 2}
+      offsetY={heightPx / 2}
+      rotation={obj.rotationDeg}
       listening={!ghost}
     >
-      <Group offsetX={0} offsetY={0} rotation={obj.rotationDeg}>
-        <Rect
-          x={-widthPx / 2}
-          y={-heightPx / 2}
-          width={widthPx}
-          height={heightPx}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={selected ? 3 : 2}
-          cornerRadius={8}
-          opacity={opacity}
-        />
-      </Group>
+      <Rect
+        width={widthPx}
+        height={heightPx}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={selected ? 3 : 2}
+        cornerRadius={8}
+        opacity={opacity}
+      />
       {!ghost && (
         <Text
           text="Platform"
-          x={rotatedLabel.x}
-          y={rotatedLabel.y}
+          x={8}
+          y={6}
           fill="#064e3b"
           fontSize={12}
           fontStyle="600"
