@@ -148,19 +148,17 @@ export default function Canvas2D({
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
 
-    if (activeTool === "ramp" || activeTool === "platform") {
+    const isStageClick = evt.target === stageRef.current || evt.target === stageRef.current.getStage();
+
+    if ((activeTool === "ramp" || activeTool === "platform") && isStageClick) {
       const xMm = snapOn ? snapMm(pxToMm(pos.x)) : pxToMm(pos.x);
       const yMm = snapOn ? snapMm(pxToMm(pos.y)) : pxToMm(pos.y);
       onPlaceAt(activeTool, xMm, yMm);
       return;
     }
 
-    if (activeTool === "select") {
+    if (isStageClick) {
       onClearSelection();
-    }
-
-    if (activeTool === "delete") {
-      onSetActiveTool("select");
     }
 
     evt.cancelBubble = true;
@@ -168,15 +166,14 @@ export default function Canvas2D({
 
   const handleContextMenu = (evt: any) => {
     evt.evt.preventDefault();
-    if (activeTool !== "select") {
-      onSetActiveTool("select");
+    if (activeTool !== "move") {
+      onSetActiveTool("move");
     }
   };
 
   const handleObjectPointerDown = (evt: any, obj: Object2D) => {
-    if (activeTool === "select") {
-      onSelect(obj.id);
-    } else if (activeTool === "delete") {
+    onSelect(obj.id);
+    if (activeTool === "delete") {
       onDeleteObject(obj.id);
     }
     evt.cancelBubble = true;
@@ -200,7 +197,7 @@ export default function Canvas2D({
   const objectNodes = objects.map((obj) => {
     const isSelected = obj.id === selectedId;
     const isHover = obj.id === hoverId;
-    const draggable = activeTool === "select" && !obj.locked;
+    const draggable = activeTool === "move" && !obj.locked;
     const hoverHandlers = {
       onMouseEnter: () => setHoverId(obj.id),
       onMouseLeave: () => setHoverId((current) => (current === obj.id ? null : current)),

@@ -1,6 +1,6 @@
 # Occupational Builder
 
-**Build version:** v0.2.3  
+**Build version:** v0.2.4  
 **Status:** Active development (v1 scope)
 
 Occupational Builder is a **design-only, browser-based ramp and platform builder** for occupational access scenarios.  
@@ -94,7 +94,7 @@ There is **no backend**.
 ### Tools (left toolbox)
 - Ramp
 - Platform (Landing)
-- Select / Move
+- Move (dragging)
 - Delete
 - Snap toggle
 
@@ -129,11 +129,11 @@ Parameters:
 
 ## Behaviour Rules
 
-- Objects are placed by selecting a tool and clicking the canvas
-- Selection by click
-- Drag to move
+- Objects are placed by selecting a tool and clicking empty canvas area
+- Selection is always available by left-clicking any object
+- Drag to move when the Move tool is active (locked objects cannot move)
 - Resize via corner handles
-- Rotation via inspector
+- Rotation via inspector and quick rotate buttons
 - Snap to grid ON by default
 - 3D mode is **view-only** in v1
 - All validation is **non-blocking warnings only**
@@ -169,6 +169,11 @@ Parameters:
 ---
 
 ## Changelog
+
+### v0.2.4
+- Default selection on click with a dedicated Move tool for dragging, plus deletion respects empty-canvas clearing.
+- Added quick rotate (-90°/+90°) buttons in the top bar and persisted rotation for ramps and platforms.
+- Lightened the 2D grid styling and surfaced the app version directly in the header.
 
 ### v0.2.3
 - Fix TypeScript types for BuilderState and 2D shape rendering (build fix).

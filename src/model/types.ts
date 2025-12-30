@@ -1,4 +1,4 @@
-export type Tool = "select" | "ramp" | "platform" | "delete";
+export type Tool = "move" | "ramp" | "platform" | "delete";
 
 export type ObjectKind = "ramp" | "platform";
 

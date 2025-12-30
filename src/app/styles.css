@@ -71,6 +71,17 @@
   margin: 0;
 }
 
+.top-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar__rotations {
+  display: inline-flex;
+  gap: 8px;
+}
+
 .top-bar__modes {
   display: inline-flex;
   gap: 8px;
@@ -91,6 +102,16 @@
   background: #2563eb;
   color: #ffffff;
   border-color: #1d4ed8;
+}
+
+.mode-button--ghost {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.mode-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .mode-button:focus-visible {
@@ -195,7 +216,7 @@
   cursor: not-allowed;
 }
 
-.ob-canvasHost[data-tool="select"] {
+.ob-canvasHost[data-tool="move"] {
   cursor: default;
 }
 
