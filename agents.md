@@ -1,100 +1,139 @@
-# AGENTS — Automation & Codex Rules
+# AGENTS — Occupational Builder Repository Rules (Codex + Automation)
 
-This file defines **non-negotiable rules** for Codex and any automated agent modifying this repository.
-
-If instructions in this file conflict with a prompt, **this file wins**.
+These rules are **non-negotiable** for Codex and any automated agent modifying this repository.
+If a prompt conflicts with this file, **this file wins**.
 
 ---
 
-## Core Rules
+## 0) Most important clarification (prevents “I can’t proceed” failures)
 
-1. **Never run commands**
-   - No npm install
-   - No builds
-   - No tests
+Agents **ARE ALLOWED** to:
+- Read any files in this repository
+- Create/edit/delete files in this repository
+- Output changes as a patch (diff) or full file contents
 
-2. **Never modify GitHub Actions**
-   - Unless explicitly instructed
+Agents **ARE NOT ALLOWED** to:
+- Run any shell commands (npm/node/git/bash/etc.)
+- Install dependencies
+- Assume network access
 
-3. **Never add dependencies casually**
-   - All dependencies must be pinned
-   - React remains on v18 for v1
-   - @react-three/fiber must stay on v8.x while React is 18
+If an agent claims it “cannot inspect files without commands”, that is incorrect.
+The agent must proceed by reading and editing repo files directly.
+If the tool is not connected to the repo workspace, the agent must request being run in a repo-connected mode (not ask for random file pastes by default).
 
-4. **One logical change per commit**
-   - UI shell
-   - Canvas grid
-   - Selection logic
-   - Inspector bindings
-   - etc
+---
 
-5. **Green build is mandatory**
-   - If a change risks the build, stop
-  
-## Allowed vs forbidden in this repo (Codex/agents)
-
-Allowed:
-- Read any repository files.
-- Create, edit, and delete repository files.
-- Propose changes as patches/diffs or full file contents.
-- Make commits via GitHub UI (no CLI required).
+## 1) No commands, ever
 
 Forbidden:
-- Running shell commands of any kind (npm, node, git, bash, etc.).
-- Installing dependencies locally.
-- Any network access assumptions.
+- npm install / npm ci
+- npm run build / test / lint
+- node scripts
+- any git CLI commands
+- any shell execution
 
-If you need information, inspect the repo files directly (do not use commands).
-
----
-
-## Export Rules
-
-- Components that are imported as default **must export default**
-- Named exports must be imported explicitly
-- Do not change export style without changing imports
+Allowed:
+- Reasoning from code
+- TypeScript-safe edits
+- Let GitHub Actions verify builds (the user will check Actions)
 
 ---
 
-## Changelog Rules
+## 2) GitHub Actions policy
 
+- Do not modify `.github/workflows/*` or GitHub Pages settings
+- Only change Actions if the user explicitly requests it
+
+---
+
+## 3) Dependencies policy
+
+- Do not add dependencies unless explicitly requested
+- If adding dependencies:
+  - pin exact versions (no ranges)
+  - React stays on **v18** for v1
+  - `@react-three/fiber` must stay on **v8.x** while React is 18
+
+---
+
+## 4) Versioning and changelog policy (mandatory)
+
+### Source of truth
+- App version lives in: `src/app/version.ts`
+  - `export const APP_VERSION = "X.Y.Z";`
+
+### UI requirement
+- Top bar must display: `Occupational Builder vX.Y.Z`
+
+### README requirement
 - Every meaningful change must:
-  1. Bump the version in README.md
-  2. Add an entry to the Changelog section
+  1) bump `APP_VERSION` (semver)
+  2) add a matching entry in `README.md` under a Changelog section
 
-### Version Bump Guidance
+### Version bump guidance
 - Major (X.0.0): architecture or scope change
 - Minor (X.Y.0): new feature
-- Patch (X.Y.Z): bugfix or refactor
+- Patch (X.Y.Z): bugfix / refactor / UI polish
 
 ---
 
-## Allowed Scope by Phase
+## 5) Change hygiene
 
-### Current Phase: v1
+- Prefer **one PR per feature**.
+- Prefer **one logical change per commit** (examples: UI shell, grid, selection, inspector bindings).
+- Keep diffs small and reviewable.
+
+When outputting changes, agents must provide:
+- A short list of files changed
+- A patch/diff (preferred) or full file contents
+
+---
+
+## 6) Build safety (without running commands)
+
+Agents must not claim “green build” themselves (no commands).
+Agents must:
+- keep TypeScript types consistent
+- avoid breaking imports/exports
+- minimise risk by making small, compilable changes
+
+The user will confirm “green” via GitHub Actions.
+
+---
+
+## 7) Export/import rules (avoid common TS failures)
+
+- If imported as default, it **must** be `export default`
+- Named exports must be imported with braces
+- Do not change export style without updating all imports
+
+---
+
+## 8) Scope limits (v1)
+
 Allowed:
 - UI
 - 2D design
 - 3D preview (view-only)
 - PDF export
-- Local storage
+- localStorage save/load
 
 Not allowed:
-- Pricing
-- Authentication
-- Backend APIs
-- Collaboration
+- pricing
+- authentication/login
+- backend APIs
+- collaboration
 
 ---
 
-## Failure Protocol
+## 9) Failure protocol (what to do instead of refusing)
 
-If a requested change risks:
-- breaking the build
-- changing scope
+If a request risks:
+- breaking TypeScript compilation
 - introducing hidden dependencies
+- changing scope
 
-Then:
-- Stop
-- Explain the risk
-- Ask for confirmation
+Then the agent must:
+- implement the smallest safe subset that compiles
+- leave clear TODOs for the risky parts
+- explain what was intentionally deferred
