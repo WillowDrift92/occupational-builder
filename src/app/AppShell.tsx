@@ -11,7 +11,7 @@ import "./styles.css";
 export type EditMode = "2d" | "3d";
 
 const statusText: Record<Tool, string> = {
-  select: "Select: Click an object to select. Drag to move.",
+  move: "Move: Click any object to select. Drag to move (unlocked only).",
   ramp: "Ramp: Specify insertion point. Click to place. Esc to cancel.",
   platform: "Platform: Specify insertion point. Click to place. Esc to cancel.",
   delete: "Delete: Click an object to delete. Esc to cancel.",
@@ -19,7 +19,7 @@ const statusText: Record<Tool, string> = {
 
 export default function AppShell() {
   const [mode, setMode] = useState<EditMode>("2d");
-  const [activeTool, setActiveTool] = useState<Tool>("select");
+  const [activeTool, setActiveTool] = useState<Tool>("move");
   const [snapOn, setSnapOn] = useState(true);
   const [objects, setObjects] = useState<Object2D[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -33,11 +33,11 @@ export default function AppShell() {
         return;
       }
       if (event.key === "Escape") {
-        setActiveTool("select");
+        setActiveTool("move");
         return;
       }
       const key = event.key.toLowerCase();
-      if (key === "v") setActiveTool("select");
+      if (key === "m") setActiveTool("move");
       if (key === "r") setActiveTool("ramp");
       if (key === "p") setActiveTool("platform");
       if (key === "d") setActiveTool("delete");
@@ -61,7 +61,7 @@ export default function AppShell() {
       setObjects((prev) => [...prev, platform]);
       setSelectedId(platform.id);
     }
-    setActiveTool("select");
+    setActiveTool("move");
   };
 
   const handleUpdateObject = (id: string, updater: (obj: Object2D) => Object2D) => {
@@ -71,15 +71,32 @@ export default function AppShell() {
   const handleDeleteObject = (id: string) => {
     setObjects((prev) => prev.filter((obj) => obj.id !== id));
     setSelectedId((prev) => (prev === id ? null : prev));
-    setActiveTool("select");
   };
 
   const handleClearSelection = () => setSelectedId(null);
 
+  const handleRotateSelected = (delta: number) => {
+    if (!selectedId) return;
+    setObjects((prev) =>
+      prev.map((obj) => {
+        if (obj.id !== selectedId) return obj;
+        const startingRotation = snapOn ? Math.round(obj.rotationDeg / 90) * 90 : obj.rotationDeg;
+        const nextRotation = ((startingRotation + delta) % 360 + 360) % 360;
+        return { ...obj, rotationDeg: nextRotation };
+      }),
+    );
+  };
+
   return (
     <div className="ob-root">
       <div className="ob-top">
-        <TopBar mode={mode} onSetMode={setMode} />
+        <TopBar
+          mode={mode}
+          onSetMode={setMode}
+          canRotate={Boolean(selectedId)}
+          onRotateLeft={() => handleRotateSelected(-90)}
+          onRotateRight={() => handleRotateSelected(90)}
+        />
       </div>
       <div className="ob-main">
         <aside className="ob-left ob-panel">

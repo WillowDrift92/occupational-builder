@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Group, Line } from "react-konva";
+import { Group, Line, Rect } from "react-konva";
 
 type Grid2DProps = {
   width: number;
@@ -20,8 +20,8 @@ export default function Grid2D({ width, height }: Grid2DProps) {
         <Line
           key={`v-${columnIndex}`}
           points={[x, 0, x, height]}
-          stroke={isMajor ? "rgba(148, 163, 184, 0.85)" : "rgba(203, 213, 225, 0.65)"}
-          strokeWidth={isMajor ? 1.25 : 1}
+          stroke={isMajor ? "rgba(148, 163, 184, 0.32)" : "rgba(148, 163, 184, 0.14)"}
+          strokeWidth={isMajor ? 1 : 0.75}
           listening={false}
         />,
       );
@@ -35,8 +35,8 @@ export default function Grid2D({ width, height }: Grid2DProps) {
         <Line
           key={`h-${rowIndex}`}
           points={[0, y, width, y]}
-          stroke={isMajor ? "rgba(148, 163, 184, 0.85)" : "rgba(203, 213, 225, 0.65)"}
-          strokeWidth={isMajor ? 1.25 : 1}
+          stroke={isMajor ? "rgba(148, 163, 184, 0.32)" : "rgba(148, 163, 184, 0.14)"}
+          strokeWidth={isMajor ? 1 : 0.75}
           listening={false}
         />,
       );
@@ -46,5 +46,10 @@ export default function Grid2D({ width, height }: Grid2DProps) {
     return nodes;
   }, [height, width]);
 
-  return <Group listening={false}>{lines}</Group>;
+  return (
+    <Group listening={false}>
+      <Rect width={width} height={height} fill="#f8fbff" />
+      {lines}
+    </Group>
+  );
 }
