@@ -30,6 +30,21 @@ If instructions in this file conflict with a prompt, **this file wins**.
 
 5. **Green build is mandatory**
    - If a change risks the build, stop
+  
+## Allowed vs forbidden in this repo (Codex/agents)
+
+Allowed:
+- Read any repository files.
+- Create, edit, and delete repository files.
+- Propose changes as patches/diffs or full file contents.
+- Make commits via GitHub UI (no CLI required).
+
+Forbidden:
+- Running shell commands of any kind (npm, node, git, bash, etc.).
+- Installing dependencies locally.
+- Any network access assumptions.
+
+If you need information, inspect the repo files directly (do not use commands).
 
 ---
 
