@@ -1,3 +1,10 @@
-export default function Inspector() {
-  return <div>Inspector Placeholder</div>;
-}
+import React from "react";
+
+export const Inspector: React.FC = () => {
+  return (
+    <div className="panel">
+      <h2 className="panel-title">Inspector</h2>
+      <p className="muted">No selection</p>
+    </div>
+  );
+};

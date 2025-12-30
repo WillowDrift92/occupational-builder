@@ -1,3 +1,9 @@
-export default function Canvas2D() {
-  return <div>Canvas 2D Placeholder</div>;
-}
+import React from "react";
+
+export const Canvas2D: React.FC = () => {
+  return (
+    <div className="canvas-placeholder">
+      <div className="canvas-label">2D Canvas (placeholder)</div>
+    </div>
+  );
+};
