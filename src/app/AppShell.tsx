@@ -15,16 +15,18 @@ export default function AppShell() {
   const handleToggleSnap = () => setSnapOn((prev) => !prev);
 
   return (
-    <div className="app-shell">
-      <TopBar mode={mode} onSetMode={setMode} />
-      <div className="app-body">
-        <aside className="panel toolbox-panel">
+    <div className="ob-root">
+      <div className="ob-top">
+        <TopBar mode={mode} onSetMode={setMode} />
+      </div>
+      <div className="ob-main">
+        <aside className="ob-left ob-panel">
           <Toolbox snapOn={snapOn} onToggleSnap={handleToggleSnap} />
         </aside>
-        <main className="canvas-panel ob-canvasPanel">
+        <main className="ob-center ob-panel">
           {mode === "2d" ? <Canvas2D /> : <Preview3D />}
         </main>
-        <aside className="panel inspector-panel">
+        <aside className="ob-right ob-panel">
           <Inspector />
         </aside>
       </div>
