@@ -1,6 +1,6 @@
 # Occupational Builder
 
-**Build version:** v0.4.0  
+**Build version:** v0.4.1  
 **Status:** Active development (v1 scope)
 
 Occupational Builder is a **design-only, browser-based ramp and platform builder** for occupational access scenarios.  
@@ -169,6 +169,9 @@ Parameters:
 ---
 
 ## Changelog
+
+### v0.4.1
+- Updated ramp wings to render as tapered triangles that share the ramp’s stroke styling and hit-testing/selection bounds.
 
 ### v0.4.0
 - Added measurements checkboxes in the Inspector with elevation-aware disabling, introduced ramp wing controls, and rendered ramp wings in 2D with selection and snap-aware bounds.
