@@ -29,10 +29,8 @@ export interface PlatformObj extends BaseObj {
 
 export type Object2D = RampObj | PlatformObj;
 
-export interface BuilderState {
-  mode: "edit" | "preview";
-  activeTool: Tool;
+export type Snapshot = {
   snapOn: boolean;
   objects: Object2D[];
   selectedId: string | null;
-}
+};

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { newPlatformAt, newRampAt } from "../model/defaults";
-import { Object2D, Tool } from "../model/types";
+import { Object2D, Snapshot, Tool } from "../model/types";
 import { centerFromTopLeftMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../model/geometry";
-import { PersistedProject, loadProject, saveProject } from "../model/storage";
+import { loadProject, saveProject } from "../model/storage";
 import { GRID_STEP_MM, snapMm } from "../model/units";
+import { HistoryState, canRedo, canUndo, commitSnapshot, createHistoryState, redo, replacePresent, undo } from "../model/history";
 import Canvas2D from "../ui/canvas/Canvas2D";
 import Preview3D from "../ui/preview/Preview3D";
 import Inspector from "../ui/layout/Inspector";
@@ -22,12 +23,18 @@ const statusText: Record<Tool, string> = {
 
 const FINE_NUDGE_MM = 10;
 
+const defaultSnapshot: Snapshot = {
+  snapOn: true,
+  objects: [],
+  selectedId: null,
+};
+
 export default function AppShell() {
   const [mode, setMode] = useState<EditMode>("2d");
   const [activeTool, setActiveTool] = useState<Tool>("none");
-  const [snapOn, setSnapOn] = useState(true);
-  const [objects, setObjects] = useState<Object2D[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryState>(() => createHistoryState(defaultSnapshot));
+
+  const { objects, selectedId, snapOn } = history.present;
 
   const saveTimerRef = useRef<number | null>(null);
 
@@ -36,9 +43,13 @@ export default function AppShell() {
     if (restored) {
       setMode(restored.mode);
       setActiveTool(restored.activeTool);
-      setSnapOn(restored.snapOn);
-      setObjects(restored.objects);
-      setSelectedId(restored.selectedId);
+      setHistory(
+        createHistoryState({
+          objects: restored.objects,
+          snapOn: restored.snapOn,
+          selectedId: restored.selectedId,
+        }),
+      );
     }
   }, []);
 
@@ -51,116 +62,156 @@ export default function AppShell() {
     [],
   );
 
-  const scheduleSave = useCallback(
-    (overrides: Partial<PersistedProject> = {}) => {
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current);
-      }
+  useEffect(() => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+    }
 
-      const snapshot: PersistedProject = {
-        mode,
-        activeTool,
-        snapOn,
-        objects,
-        selectedId,
-        ...overrides,
-      };
+    const snapshot = { mode, activeTool, objects, snapOn, selectedId };
 
-      saveTimerRef.current = window.setTimeout(() => {
-        saveProject(snapshot);
-        saveTimerRef.current = null;
-      }, 200);
+    saveTimerRef.current = window.setTimeout(() => {
+      saveProject(snapshot);
+      saveTimerRef.current = null;
+    }, 200);
+  }, [mode, activeTool, objects, snapOn, selectedId]);
+
+  const applySnapshot = useCallback(
+    (updater: (snapshot: Snapshot) => Snapshot, commitChange = false) => {
+      setHistory((current) => {
+        const updated = updater(current.present);
+        if (updated === current.present) return current;
+        return commitChange ? commitSnapshot(current, updated) : replacePresent(current, updated);
+      });
     },
-    [mode, activeTool, snapOn, objects, selectedId],
+    [],
   );
 
+  const handleUndo = useCallback(() => {
+    setHistory((current) => (canUndo(current) ? undo(current) : current));
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    setHistory((current) => (canRedo(current) ? redo(current) : current));
+  }, []);
+
   const handleToggleSnap = () => {
-    setSnapOn((prev) => {
-      const next = !prev;
-      scheduleSave({ snapOn: next });
-      return next;
-    });
+    applySnapshot((present) => ({ ...present, snapOn: !present.snapOn }), true);
   };
 
   const handleSetMode = (nextMode: EditMode) => {
     setMode(nextMode);
-    scheduleSave({ mode: nextMode });
   };
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      applySnapshot((present) => (present.selectedId === id ? present : { ...present, selectedId: id }));
+    },
+    [applySnapshot],
+  );
 
   const status = useMemo(() => statusText[activeTool], [activeTool]);
 
-  const handlePlaceAt = (tool: Tool, xMm: number, yMm: number) => {
-    if (tool === "ramp") {
-      const ramp = newRampAt(xMm, yMm);
-      setObjects((prev) => {
-        const next = [...prev, ramp];
-        scheduleSave({ objects: next, selectedId: ramp.id, activeTool: "none" });
-        return next;
-      });
-      setSelectedId(ramp.id);
-    }
-    if (tool === "platform") {
-      const platform = newPlatformAt(xMm, yMm);
-      setObjects((prev) => {
-        const next = [...prev, platform];
-        scheduleSave({ objects: next, selectedId: platform.id, activeTool: "none" });
-        return next;
-      });
-      setSelectedId(platform.id);
-    }
-    setActiveTool("none");
-  };
-
-  const handleUpdateObject = (id: string, updater: (obj: Object2D) => Object2D) => {
-    setObjects((prev) => {
-      const next = prev.map((obj) => (obj.id === id ? updater(obj) : obj));
-      scheduleSave({ objects: next });
-      return next;
-    });
-  };
-
-  const handleDeleteObject = (id: string) => {
-    setObjects((prev) => {
-      const nextObjects = prev.filter((obj) => obj.id !== id);
-      setSelectedId((currentSelected) => {
-        const nextSelected = currentSelected === id ? null : currentSelected;
-        scheduleSave({ objects: nextObjects, selectedId: nextSelected });
-        return nextSelected;
-      });
-      return nextObjects;
-    });
-  };
-
-  const handleClearSelection = () => {
-    setSelectedId((prev) => {
-      if (prev !== null) {
-        scheduleSave({ selectedId: null });
+  const handlePlaceAt = useCallback(
+    (tool: Tool, xMm: number, yMm: number) => {
+      if (tool === "ramp") {
+        const ramp = newRampAt(xMm, yMm);
+        applySnapshot(
+          (present) => ({ ...present, objects: [...present.objects, ramp], selectedId: ramp.id }),
+          true,
+        );
+        setActiveTool("none");
+        return;
       }
-      return null;
-    });
-  };
+      if (tool === "platform") {
+        const platform = newPlatformAt(xMm, yMm);
+        applySnapshot(
+          (present) => ({ ...present, objects: [...present.objects, platform], selectedId: platform.id }),
+          true,
+        );
+        setActiveTool("none");
+        return;
+      }
+    },
+    [applySnapshot],
+  );
 
-  const handleRotateSelected = (delta: number) => {
-    if (!selectedId) return;
-    setObjects((prev) => {
-      const next = prev.map((obj) => {
-        if (obj.id !== selectedId) return obj;
-        const startingRotation = snapOn ? Math.round(obj.rotationDeg / 90) * 90 : obj.rotationDeg;
-        const nextRotation = ((startingRotation + delta) % 360 + 360) % 360;
-        return { ...obj, rotationDeg: nextRotation };
-      });
-      scheduleSave({ objects: next });
-      return next;
+  const handleUpdateObject = useCallback(
+    (id: string, updater: (obj: Object2D) => Object2D) => {
+      applySnapshot((present) => {
+        let changed = false;
+        const nextObjects = present.objects.map((obj) => {
+          if (obj.id !== id) return obj;
+          changed = true;
+          return updater(obj);
+        });
+        return changed ? { ...present, objects: nextObjects } : present;
+      }, true);
+    },
+    [applySnapshot],
+  );
+
+  const handleDeleteObject = useCallback(
+    (id: string) => {
+      applySnapshot((present) => {
+        const nextObjects = present.objects.filter((obj) => obj.id !== id);
+        if (nextObjects.length === present.objects.length) return present;
+        const nextSelected = present.selectedId === id ? null : present.selectedId;
+        return { ...present, objects: nextObjects, selectedId: nextSelected };
+      }, true);
+    },
+    [applySnapshot],
+  );
+
+  const handleClearSelection = useCallback(() => {
+    applySnapshot((present) => {
+      if (present.selectedId === null) return present;
+      return { ...present, selectedId: null };
     });
-  };
+  }, [applySnapshot]);
+
+  const handleRotateSelected = useCallback(
+    (delta: number) => {
+      applySnapshot((present) => {
+        if (!present.selectedId) return present;
+        let changed = false;
+        const nextObjects = present.objects.map((obj) => {
+          if (obj.id !== present.selectedId) return obj;
+          changed = true;
+          const startingRotation = present.snapOn ? Math.round(obj.rotationDeg / 90) * 90 : obj.rotationDeg;
+          const nextRotation = ((startingRotation + delta) % 360 + 360) % 360;
+          return { ...obj, rotationDeg: nextRotation };
+        });
+        return changed ? { ...present, objects: nextObjects } : present;
+      }, true);
+    },
+    [applySnapshot],
+  );
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
-      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
-      if (["input", "textarea", "select"].includes(activeTag)) {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const activeTag = (activeEl?.tagName || "").toLowerCase();
+      const isTyping = ["input", "textarea", "select"].includes(activeTag) || activeEl?.isContentEditable;
+      if (isTyping) return;
+
+      const key = event.key.toLowerCase();
+
+      if ((event.metaKey || event.ctrlKey) && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
         return;
       }
-      const key = event.key.toLowerCase();
+
+      if ((event.metaKey || event.ctrlKey) && key === "y") {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
       if (event.key === "Escape") {
         setActiveTool("none");
         return;
@@ -178,35 +229,38 @@ export default function AppShell() {
       }
       if (event.key.startsWith("Arrow")) {
         event.preventDefault();
-        if (!selectedId) return;
-        setObjects((prev) => {
-          const next = prev.map((obj) => {
-            if (obj.id !== selectedId || obj.locked) return obj;
+        applySnapshot((present) => {
+          if (!present.selectedId) return present;
+          let changed = false;
+          const nextObjects = present.objects.map((obj) => {
+            if (obj.id !== present.selectedId || obj.locked) return obj;
             const bbox = getObjectBoundingBoxMm(obj);
             const currentTopLeft = topLeftFromCenterMm({ xMm: obj.xMm, yMm: obj.yMm }, bbox);
-            const nudgeStep = snapOn ? GRID_STEP_MM : FINE_NUDGE_MM;
+            const nudgeStep = present.snapOn ? GRID_STEP_MM : FINE_NUDGE_MM;
             const offset = { xMm: 0, yMm: 0 };
             if (event.key === "ArrowUp") offset.yMm = -nudgeStep;
             if (event.key === "ArrowDown") offset.yMm = nudgeStep;
             if (event.key === "ArrowLeft") offset.xMm = -nudgeStep;
             if (event.key === "ArrowRight") offset.xMm = nudgeStep;
-            if (offset.xMm === 0 && offset.yMm === 0) return obj;
             const nextTopLeft = { xMm: currentTopLeft.xMm + offset.xMm, yMm: currentTopLeft.yMm + offset.yMm };
-            const snappedTopLeft = snapOn
+            const snappedTopLeft = present.snapOn
               ? { xMm: snapMm(nextTopLeft.xMm), yMm: snapMm(nextTopLeft.yMm) }
               : nextTopLeft;
             const nextCenter = centerFromTopLeftMm(snappedTopLeft, bbox);
+            changed = true;
             return { ...obj, xMm: nextCenter.xMm, yMm: nextCenter.yMm };
           });
-          scheduleSave({ objects: next });
-          return next;
-        });
+          return changed ? { ...present, objects: nextObjects } : present;
+        }, true);
       }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedId, scheduleSave, handleDeleteObject, snapOn]);
+  }, [applySnapshot, handleDeleteObject, handleRedo, handleUndo, selectedId]);
+
+  const canUndoAction = canUndo(history);
+  const canRedoAction = canRedo(history);
 
   return (
     <div className="ob-root">
@@ -218,6 +272,10 @@ export default function AppShell() {
           onRotateLeft={() => handleRotateSelected(-90)}
           onRotateRight={() => handleRotateSelected(90)}
           snapOn={snapOn}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndoAction}
+          canRedo={canRedoAction}
         />
       </div>
       <div className="ob-main">
@@ -236,7 +294,7 @@ export default function AppShell() {
               snapOn={snapOn}
               objects={objects}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={handleSelect}
               onClearSelection={handleClearSelection}
               onPlaceAt={handlePlaceAt}
               onUpdateObject={handleUpdateObject}
