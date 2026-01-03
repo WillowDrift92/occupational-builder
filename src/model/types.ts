@@ -1,33 +1,41 @@
-export type Tool = "none" | "ramp" | "platform" | "delete";
+export type Tool = "none" | "ramp" | "landing" | "delete";
 
-export type ObjectKind = "ramp" | "platform";
+export type ObjectKind = "ramp" | "landing" | "stairs";
 
-export interface BaseObj {
+export type MeasurementState = {
+  enabled: { L: boolean; W: boolean; H: boolean; E: boolean };
+  sides?: { L?: "one" | "both"; W?: "one" | "both" };
+};
+
+export type BaseObj = {
   id: string;
   kind: ObjectKind;
   xMm: number;
   yMm: number;
-  rotationDeg: number;
-  elevationMm: number;
-  locked: boolean;
-}
-
-export interface RampObj extends BaseObj {
-  kind: "ramp";
-  runMm: number;
-  widthMm: number;
-  heightMm: number;
-  showArrow: boolean;
-}
-
-export interface PlatformObj extends BaseObj {
-  kind: "platform";
   lengthMm: number;
   widthMm: number;
-  thicknessMm: number;
-}
+  heightMm: number;
+  elevationMm: number;
+  rotationDeg: number;
+  locked: boolean;
+  measurements: MeasurementState;
+};
 
-export type Object2D = RampObj | PlatformObj;
+export type RampObj = BaseObj & {
+  kind: "ramp";
+  showArrow: boolean;
+  hasLeftWing?: boolean;
+  leftWingSizeMm?: number;
+  hasRightWing?: boolean;
+  rightWingSizeMm?: number;
+  runMm: number;
+};
+
+export type LandingObj = BaseObj & {
+  kind: "landing";
+};
+
+export type Object2D = RampObj | LandingObj;
 
 export type Snapshot = {
   snapOn: boolean;

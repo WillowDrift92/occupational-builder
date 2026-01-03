@@ -1,4 +1,12 @@
-import { Object2D, PlatformObj, RampObj, Tool } from "./types";
+import {
+  DEFAULT_LANDING_HEIGHT_MM,
+  DEFAULT_LANDING_LENGTH_MM,
+  DEFAULT_LANDING_WIDTH_MM,
+  DEFAULT_RAMP_HEIGHT_MM,
+  DEFAULT_RAMP_RUN_MM,
+  DEFAULT_RAMP_WIDTH_MM,
+} from "./defaults";
+import { LandingObj, MeasurementState, Object2D, RampObj, Tool } from "./types";
 
 export const STORAGE_KEY = "occupational_builder_v1";
 
@@ -15,7 +23,7 @@ export type PersistedProject = {
 type PersistedEnvelope = {
   schemaVersion: number;
   savedAt: number;
-  data: PersistedProject;
+  data: unknown;
 };
 
 const hasLocalStorage = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -24,55 +32,149 @@ const isNumber = (value: unknown): value is number => typeof value === "number" 
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 const isString = (value: unknown): value is string => typeof value === "string";
 const isMode = (value: unknown): value is "2d" | "3d" => value === "2d" || value === "3d";
-const isTool = (value: unknown): value is Tool => value === "none" || value === "ramp" || value === "platform" || value === "delete";
+const isTool = (value: unknown): value is Tool =>
+  value === "none" || value === "ramp" || value === "landing" || value === "delete";
 
-const isRamp = (value: any): value is RampObj =>
-  value &&
-  value.kind === "ramp" &&
-  isString(value.id) &&
-  isNumber(value.xMm) &&
-  isNumber(value.yMm) &&
-  isNumber(value.rotationDeg) &&
-  isNumber(value.elevationMm) &&
-  isBoolean(value.locked) &&
-  isNumber(value.runMm) &&
-  isNumber(value.widthMm) &&
-  isNumber(value.heightMm) &&
-  isBoolean(value.showArrow);
+const isLegacyTool = (value: unknown): value is "platform" => value === "platform";
 
-const isPlatform = (value: any): value is PlatformObj =>
-  value &&
-  value.kind === "platform" &&
-  isString(value.id) &&
-  isNumber(value.xMm) &&
-  isNumber(value.yMm) &&
-  isNumber(value.rotationDeg) &&
-  isNumber(value.elevationMm) &&
-  isBoolean(value.locked) &&
-  isNumber(value.lengthMm) &&
-  isNumber(value.widthMm) &&
-  isNumber(value.thicknessMm);
+const normaliseMeasurements = (value: any): MeasurementState => {
+  const sidesValue = value?.sides;
+  const side = (candidate: any): "one" | "both" | undefined =>
+    candidate === "one" || candidate === "both" ? candidate : undefined;
+  const sides =
+    sidesValue && (side(sidesValue?.L) || side(sidesValue?.W))
+      ? {
+          ...(side(sidesValue?.L) ? { L: side(sidesValue?.L) } : {}),
+          ...(side(sidesValue?.W) ? { W: side(sidesValue?.W) } : {}),
+        }
+      : undefined;
 
-const isObject2D = (value: any): value is Object2D => isRamp(value) || isPlatform(value);
+  return {
+    enabled: {
+      L: value?.enabled?.L ?? true,
+      W: value?.enabled?.W ?? true,
+      H: value?.enabled?.H ?? true,
+      E: value?.enabled?.E ?? true,
+    },
+    ...(sides ? { sides } : {}),
+  };
+};
 
-const isPersistedProject = (value: any): value is PersistedProject =>
-  value &&
-  isMode(value.mode) &&
-  isTool(value.activeTool) &&
-  isBoolean(value.snapOn) &&
-  Array.isArray(value.objects) &&
-  value.objects.every(isObject2D) &&
-  (value.selectedId === null || isString(value.selectedId));
+const toRamp = (value: any): RampObj | null => {
+  if (!value || value.kind !== "ramp" || !isString(value.id) || !isNumber(value.xMm) || !isNumber(value.yMm)) return null;
+
+  const lengthMm = isNumber(value.lengthMm) ? value.lengthMm : isNumber(value.runMm) ? value.runMm : DEFAULT_RAMP_RUN_MM;
+  const widthMm = isNumber(value.widthMm) ? value.widthMm : DEFAULT_RAMP_WIDTH_MM;
+  const heightMm = isNumber(value.heightMm) ? value.heightMm : DEFAULT_RAMP_HEIGHT_MM;
+
+  return {
+    id: value.id,
+    kind: "ramp",
+    xMm: value.xMm,
+    yMm: value.yMm,
+    lengthMm,
+    widthMm,
+    heightMm,
+    elevationMm: isNumber(value.elevationMm) ? value.elevationMm : 0,
+    rotationDeg: isNumber(value.rotationDeg) ? value.rotationDeg : 0,
+    locked: isBoolean(value.locked) ? value.locked : false,
+    measurements: normaliseMeasurements(value.measurements),
+    runMm: isNumber(value.runMm) ? value.runMm : lengthMm,
+    showArrow: isBoolean(value.showArrow) ? value.showArrow : true,
+    hasLeftWing: isBoolean(value.hasLeftWing) ? value.hasLeftWing : undefined,
+    leftWingSizeMm: isNumber(value.leftWingSizeMm) ? value.leftWingSizeMm : undefined,
+    hasRightWing: isBoolean(value.hasRightWing) ? value.hasRightWing : undefined,
+    rightWingSizeMm: isNumber(value.rightWingSizeMm) ? value.rightWingSizeMm : undefined,
+  };
+};
+
+const toLanding = (value: any): LandingObj | null => {
+  if (
+    !value ||
+    (value.kind !== "landing" && value.kind !== "platform") ||
+    !isString(value.id) ||
+    !isNumber(value.xMm) ||
+    !isNumber(value.yMm)
+  )
+    return null;
+
+  const lengthMm = isNumber(value.lengthMm) ? value.lengthMm : DEFAULT_LANDING_LENGTH_MM;
+  const widthMm = isNumber(value.widthMm) ? value.widthMm : DEFAULT_LANDING_WIDTH_MM;
+  const heightMm = isNumber(value.heightMm)
+    ? value.heightMm
+    : isNumber(value.thicknessMm)
+      ? value.thicknessMm
+      : DEFAULT_LANDING_HEIGHT_MM;
+
+  return {
+    id: value.id,
+    kind: "landing",
+    xMm: value.xMm,
+    yMm: value.yMm,
+    lengthMm,
+    widthMm,
+    heightMm,
+    elevationMm: isNumber(value.elevationMm) ? value.elevationMm : 0,
+    rotationDeg: isNumber(value.rotationDeg) ? value.rotationDeg : 0,
+    locked: isBoolean(value.locked) ? value.locked : false,
+    measurements: normaliseMeasurements(value.measurements),
+  };
+};
+
+const toObject2D = (value: any): Object2D | null => {
+  if (value?.kind === "ramp") return toRamp(value);
+  if (value?.kind === "landing" || value?.kind === "platform") return toLanding(value);
+  return null;
+};
+
+const cloneMeasurements = (value: MeasurementState): MeasurementState => ({
+  enabled: { ...value.enabled },
+  ...(value.sides ? { sides: { ...value.sides } } : {}),
+});
+
+const cloneObject = (obj: Object2D): Object2D =>
+  obj.kind === "ramp"
+    ? { ...obj, measurements: cloneMeasurements(obj.measurements) }
+    : { ...obj, measurements: cloneMeasurements(obj.measurements) };
 
 const isPersistedEnvelope = (value: any): value is PersistedEnvelope =>
   value &&
   value.schemaVersion === SCHEMA_VERSION &&
   isNumber(value.savedAt) &&
-  isPersistedProject(value.data);
+  value.data;
+
+const normaliseTool = (value: any): Tool | null => {
+  if (isTool(value)) return value;
+  if (isLegacyTool(value)) return "landing";
+  return null;
+};
+
+const normaliseProject = (value: any): PersistedProject | null => {
+  if (!value || !isMode(value.mode)) return null;
+  const activeTool = normaliseTool(value.activeTool);
+  if (!activeTool) return null;
+  if (!isBoolean(value.snapOn)) return null;
+  if (!Array.isArray(value.objects)) return null;
+
+  const objects = value.objects
+    .map(toObject2D)
+    .filter((obj): obj is Object2D => Boolean(obj))
+    .map((obj) => cloneObject(obj));
+
+  const selectedId = value.selectedId === null || isString(value.selectedId) ? value.selectedId ?? null : null;
+
+  return {
+    mode: value.mode,
+    activeTool,
+    snapOn: value.snapOn,
+    objects,
+    selectedId,
+  };
+};
 
 const cloneProject = (data: PersistedProject): PersistedProject => ({
   ...data,
-  objects: data.objects.map((obj) => ({ ...obj })),
+  objects: data.objects.map((obj) => cloneObject(obj)),
 });
 
 export function saveProject(state: PersistedProject) {
@@ -100,7 +202,9 @@ export function loadProject(): PersistedProject | null {
   try {
     const parsed = JSON.parse(raw);
     if (!isPersistedEnvelope(parsed)) return null;
-    return cloneProject(parsed.data);
+    const normalised = normaliseProject(parsed.data);
+    if (!normalised) return null;
+    return cloneProject(normalised);
   } catch (error) {
     console.warn("Failed to restore project", error);
     return null;
