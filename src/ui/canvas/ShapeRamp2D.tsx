@@ -1,4 +1,5 @@
 import { Group, Line, Arrow } from "react-konva";
+import { getRampOutlinePointsMm, getRampSeamLinesMm } from "../../model/geometry";
 import { RampObj, Tool } from "../../model/types";
 import { mmToPx } from "../../model/units";
 
@@ -31,11 +32,6 @@ export default function ShapeRamp2D({
   onDragStart,
   onDragEnd,
 }: Props) {
-  const leftWingMm = obj.hasLeftWing ? obj.leftWingSizeMm : 0;
-  const rightWingMm = obj.hasRightWing ? obj.rightWingSizeMm : 0;
-
-  const widthPx = mmToPx(obj.runMm);
-  const bodyHeightPx = mmToPx(obj.widthMm);
   const fill = ghost ? "rgba(59,130,246,0.25)" : "#e5e7eb";
   const stroke =
     activeTool === "delete" && hover
@@ -47,28 +43,20 @@ export default function ShapeRamp2D({
           : "#0f172a";
   const opacity = ghost ? 0.35 : 1;
   const strokeWidth = selected ? 3 : 2;
-  const rectX = -widthPx / 2;
-  const halfBodyHeightPx = bodyHeightPx / 2;
-  const topY = -halfBodyHeightPx;
-  const bottomY = halfBodyHeightPx;
-  const lowLeftCorner = { x: rectX, y: topY };
-  const highLeftCorner = { x: widthPx / 2, y: topY };
-  const highRightCorner = { x: widthPx / 2, y: bottomY };
-  const lowRightCorner = { x: rectX, y: bottomY };
-  const lowLeftOuter = { x: rectX, y: topY - mmToPx(leftWingMm) };
-  const lowRightOuter = { x: rectX, y: bottomY + mmToPx(rightWingMm) };
 
-  const outlinePoints = [
-    obj.hasLeftWing ? lowLeftOuter : lowLeftCorner,
-    highLeftCorner,
-    highRightCorner,
-    obj.hasRightWing ? lowRightOuter : lowRightCorner,
-    ...(obj.hasLeftWing || obj.hasRightWing ? [lowLeftCorner] : []),
-  ];
+  const outlinePointsMm = getRampOutlinePointsMm(obj);
+  const outlinePointsPx = outlinePointsMm.flatMap((point) => [mmToPx(point.xMm), mmToPx(point.yMm)]);
 
-  const outlinePointArray = outlinePoints.flatMap((point) => [point.x, point.y]);
-  const arrowStartX = -widthPx / 2 + widthPx * 0.1;
-  const arrowEndX = widthPx / 2 - widthPx * 0.1;
+  const seamLinesPx = getRampSeamLinesMm(obj).map((line) => [
+    mmToPx(line.start.xMm),
+    mmToPx(line.start.yMm),
+    mmToPx(line.end.xMm),
+    mmToPx(line.end.yMm),
+  ]);
+
+  const lengthPx = mmToPx(obj.runMm);
+  const arrowStartX = -lengthPx / 2 + lengthPx * 0.1;
+  const arrowEndX = lengthPx / 2 - lengthPx * 0.1;
 
   return (
     <Group
@@ -85,13 +73,17 @@ export default function ShapeRamp2D({
       listening={!ghost}
     >
       <Line
-        points={outlinePointArray}
+        points={outlinePointsPx}
         closed
         fill={fill}
         stroke={stroke}
         strokeWidth={strokeWidth}
         opacity={opacity}
+        lineJoin="miter"
       />
+      {seamLinesPx.map((points, idx) => (
+        <Line key={`seam-${idx}`} points={points} stroke={stroke} strokeWidth={strokeWidth} opacity={opacity} lineCap="butt" />
+      ))}
       {obj.showArrow && (
         <Arrow
           points={[arrowStartX, 0, arrowEndX, 0]}
