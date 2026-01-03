@@ -170,6 +170,9 @@ Parameters:
 
 ## Changelog
 
+### v0.3.3
+- Prioritised object-to-object snap over grid snap so off-grid placements become valid targets, while preserving grid alignment on unsnapped axes only.
+
 ### v0.3.2
 - Added CAD-style object-to-object snapping that aligns faces, centres, and points of interest while dragging with red guide visuals.
 - Kept grid snapping unchanged, maintained locked-object behaviour, and ensured build stability alongside UI polish.

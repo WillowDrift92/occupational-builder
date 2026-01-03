@@ -274,13 +274,12 @@ export default function Canvas2D({
 
   const getObjectSnap = (obj: Object2D, proposedPx: { x: number; y: number }) => {
     const proposedCentre: PointMm = { xMm: pxToMm(proposedPx.x), yMm: pxToMm(proposedPx.y) };
-    const baseCentre = snapOn ? getGridSnappedCentre(obj, proposedCentre) : proposedCentre;
     if (!snapOn) {
       setSnapGuide({ snappedPoint: null });
-      return baseCentre;
+      return proposedCentre;
     }
 
-    const activeAabb = getAabbMm(obj, baseCentre);
+    const activeAabb = getAabbMm(obj, proposedCentre);
     const activePois = getPoisMm(activeAabb);
     const otherObjects = objects.filter((o) => o.id !== obj.id);
 
@@ -347,19 +346,29 @@ export default function Canvas2D({
     const bestX = pickBestAxisCandidate(xCandidates);
     const bestY = pickBestAxisCandidate(yCandidates);
 
-    const snappedCentre: PointMm = {
-      xMm: baseCentre.xMm + (bestX ? bestX.delta : 0),
-      yMm: baseCentre.yMm + (bestY ? bestY.delta : 0),
+    const xSnappedToObject = Boolean(bestX);
+    const ySnappedToObject = Boolean(bestY);
+
+    const snappedAfterObject: PointMm = {
+      xMm: proposedCentre.xMm + (bestX ? bestX.delta : 0),
+      yMm: proposedCentre.yMm + (bestY ? bestY.delta : 0),
     };
 
     const snappedPoint = bestX?.type === "poi" ? bestX.targetPoint : bestY?.type === "poi" ? bestY.targetPoint : null;
     setSnapGuide({
-      snappedX: bestX ? bestX.snapCoord : undefined,
-      snappedY: bestY ? bestY.snapCoord : undefined,
+      snappedX: xSnappedToObject ? bestX?.snapCoord : undefined,
+      snappedY: ySnappedToObject ? bestY?.snapCoord : undefined,
       snappedPoint: snappedPoint ? { xMm: snappedPoint.x, yMm: snappedPoint.y } : null,
     });
 
-    return snappedCentre;
+    const bbox = getObjectBoundingBoxMm(obj);
+    const snappedTopLeft = topLeftFromCenterMm(snappedAfterObject, bbox);
+    const gridSnappedTopLeft = {
+      xMm: xSnappedToObject ? snappedTopLeft.xMm : snapMm(snappedTopLeft.xMm),
+      yMm: ySnappedToObject ? snappedTopLeft.yMm : snapMm(snappedTopLeft.yMm),
+    };
+
+    return centerFromTopLeftMm(gridSnappedTopLeft, bbox);
   };
 
   const handleObjectDragEnd = (evt: any, obj: Object2D) => {
