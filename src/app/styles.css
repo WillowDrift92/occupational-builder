@@ -71,6 +71,17 @@
   margin: 0;
 }
 
+.top-bar__left {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar__history {
+  display: inline-flex;
+  gap: 8px;
+}
+
 .top-bar__actions {
   display: flex;
   align-items: center;

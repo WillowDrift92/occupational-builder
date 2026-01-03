@@ -1,6 +1,6 @@
 # Occupational Builder
 
-**Build version:** v0.2.4  
+**Build version:** v0.3.4  
 **Status:** Active development (v1 scope)
 
 Occupational Builder is a **design-only, browser-based ramp and platform builder** for occupational access scenarios.  
@@ -169,6 +169,9 @@ Parameters:
 ---
 
 ## Changelog
+
+### v0.3.4
+- Added undo/redo with toolbar buttons and keyboard shortcuts.
 
 ### v0.3.3
 - Prioritised object-to-object snap over grid snap so off-grid placements become valid targets, while preserving grid alignment on unsnapped axes only.

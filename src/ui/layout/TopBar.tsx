@@ -8,12 +8,37 @@ type TopBarProps = {
   onRotateLeft: () => void;
   onRotateRight: () => void;
   snapOn: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
 };
 
-export default function TopBar({ mode, onSetMode, canRotate, onRotateLeft, onRotateRight, snapOn }: TopBarProps) {
+export default function TopBar({
+  mode,
+  onSetMode,
+  canRotate,
+  onRotateLeft,
+  onRotateRight,
+  snapOn,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}: TopBarProps) {
   return (
     <header className="top-bar">
-      <h1 className="top-bar__title">Occupational Builder v{APP_VERSION}</h1>
+      <div className="top-bar__left">
+        <h1 className="top-bar__title">Occupational Builder v{APP_VERSION}</h1>
+        <div className="top-bar__history">
+          <button type="button" className="mode-button mode-button--ghost" onClick={onUndo} disabled={!canUndo}>
+            Undo
+          </button>
+          <button type="button" className="mode-button mode-button--ghost" onClick={onRedo} disabled={!canRedo}>
+            Redo
+          </button>
+        </div>
+      </div>
       <div className="top-bar__actions">
         <div className={`top-bar__snap ${snapOn ? "top-bar__snap--on" : "top-bar__snap--off"}`} aria-live="polite">
           Snap {snapOn ? "ON" : "OFF"}
