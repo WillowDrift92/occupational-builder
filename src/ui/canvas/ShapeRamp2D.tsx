@@ -1,4 +1,4 @@
-import { Group, Rect, Arrow } from "react-konva";
+import { Group, Line, Arrow } from "react-konva";
 import { RampObj, Tool } from "../../model/types";
 import { mmToPx } from "../../model/units";
 
@@ -36,7 +36,6 @@ export default function ShapeRamp2D({
 
   const widthPx = mmToPx(obj.runMm);
   const bodyHeightPx = mmToPx(obj.widthMm);
-  const totalHeightPx = mmToPx(obj.widthMm + leftWingMm + rightWingMm);
   const fill = ghost ? "rgba(59,130,246,0.25)" : "#e5e7eb";
   const stroke =
     activeTool === "delete" && hover
@@ -47,9 +46,27 @@ export default function ShapeRamp2D({
           ? "#64748b"
           : "#0f172a";
   const opacity = ghost ? 0.35 : 1;
+  const strokeWidth = selected ? 3 : 2;
   const rectX = -widthPx / 2;
-  const outerRectY = -mmToPx(obj.widthMm / 2 + leftWingMm);
-  const bodyRectY = -(bodyHeightPx / 2);
+  const halfBodyHeightPx = bodyHeightPx / 2;
+  const topY = -halfBodyHeightPx;
+  const bottomY = halfBodyHeightPx;
+  const lowLeftCorner = { x: rectX, y: topY };
+  const highLeftCorner = { x: widthPx / 2, y: topY };
+  const highRightCorner = { x: widthPx / 2, y: bottomY };
+  const lowRightCorner = { x: rectX, y: bottomY };
+  const lowLeftOuter = { x: rectX, y: topY - mmToPx(leftWingMm) };
+  const lowRightOuter = { x: rectX, y: bottomY + mmToPx(rightWingMm) };
+
+  const outlinePoints = [
+    obj.hasLeftWing ? lowLeftOuter : lowLeftCorner,
+    highLeftCorner,
+    highRightCorner,
+    obj.hasRightWing ? lowRightOuter : lowRightCorner,
+    ...(obj.hasLeftWing || obj.hasRightWing ? [lowLeftCorner] : []),
+  ];
+
+  const outlinePointArray = outlinePoints.flatMap((point) => [point.x, point.y]);
   const arrowStartX = -widthPx / 2 + widthPx * 0.1;
   const arrowEndX = widthPx / 2 - widthPx * 0.1;
 
@@ -67,28 +84,14 @@ export default function ShapeRamp2D({
       rotation={obj.rotationDeg}
       listening={!ghost}
     >
-      <Rect
-        x={rectX}
-        y={outerRectY}
-        width={widthPx}
-        height={totalHeightPx}
+      <Line
+        points={outlinePointArray}
+        closed
         fill={fill}
         stroke={stroke}
-        strokeWidth={selected ? 3 : 2}
+        strokeWidth={strokeWidth}
         opacity={opacity}
       />
-      {(obj.hasLeftWing || obj.hasRightWing) && (
-        <Rect
-          x={rectX}
-          y={bodyRectY}
-          width={widthPx}
-          height={bodyHeightPx}
-          fill={fill}
-          stroke="transparent"
-          strokeWidth={0}
-          opacity={opacity}
-        />
-      )}
       {obj.showArrow && (
         <Arrow
           points={[arrowStartX, 0, arrowEndX, 0]}
@@ -96,7 +99,7 @@ export default function ShapeRamp2D({
           pointerWidth={14}
           stroke={stroke}
           fill={stroke}
-          strokeWidth={selected ? 3 : 2}
+          strokeWidth={strokeWidth}
           opacity={opacity}
         />
       )}
