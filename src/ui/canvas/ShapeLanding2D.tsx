@@ -1,9 +1,9 @@
 import { Group, Rect } from "react-konva";
-import { PlatformObj, Tool } from "../../model/types";
+import { LandingObj, Tool } from "../../model/types";
 import { mmToPx } from "../../model/units";
 
 type Props = {
-  obj: PlatformObj;
+  obj: LandingObj;
   selected: boolean;
   hover: boolean;
   activeTool: Tool;
@@ -17,7 +17,7 @@ type Props = {
   onDragEnd?: (evt: any) => void;
 };
 
-export default function ShapePlatform2D({
+export default function ShapeLanding2D({
   obj,
   selected,
   hover,

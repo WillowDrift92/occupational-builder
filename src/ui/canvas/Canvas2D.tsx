@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
-import { Object2D, PlatformObj, RampObj, Tool } from "../../model/types";
-import { newPlatformAt, newRampAt } from "../../model/defaults";
+import { LandingObj, Object2D, RampObj, Tool } from "../../model/types";
+import { newLandingAt, newRampAt } from "../../model/defaults";
 import { centerFromTopLeftMm, getDefaultBoundingBoxMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
 import { mmToPx, pxToMm, snapMm } from "../../model/units";
 import Grid2D from "./Grid2D";
-import ShapePlatform2D from "./ShapePlatform2D";
+import ShapeLanding2D from "./ShapeLanding2D";
 import ShapeRamp2D from "./ShapeRamp2D";
 
 type CanvasSize = {
@@ -346,13 +346,13 @@ export default function Canvas2D({
     };
   }, [activeTool, desiredAnchorMm]);
 
-  const ghostPlatform: PlatformObj | null = useMemo(() => {
-    if (!desiredAnchorMm || activeTool !== "platform") return null;
-    const centre = getPlacementCentreFromAnchor("platform", desiredAnchorMm);
+  const ghostLanding: LandingObj | null = useMemo(() => {
+    if (!desiredAnchorMm || activeTool !== "landing") return null;
+    const centre = getPlacementCentreFromAnchor("landing", desiredAnchorMm);
     if (!centre) return null;
     return {
-      ...newPlatformAt(centre.xMm, centre.yMm),
-      id: "ghost-platform",
+      ...newLandingAt(centre.xMm, centre.yMm),
+      id: "ghost-landing",
       locked: true,
     };
   }, [activeTool, desiredAnchorMm]);
@@ -411,7 +411,7 @@ export default function Canvas2D({
 
     const isStageClick = evt.target === stageRef.current || evt.target === stageRef.current.getStage();
 
-    if ((activeTool === "ramp" || activeTool === "platform") && isStageClick) {
+    if ((activeTool === "ramp" || activeTool === "landing") && isStageClick) {
       const anchor = screenToWorldMm(pos, camera);
       const clampedAnchor = {
         xMm: clamp(anchor.xMm, -HALF_WORKSPACE_MM, HALF_WORKSPACE_MM),
@@ -595,8 +595,8 @@ export default function Canvas2D({
   };
 
   const hudLabel = useMemo(() => {
-    if (!pointer || (activeTool !== "ramp" && activeTool !== "platform")) return null;
-    const label = activeTool === "ramp" ? "Click to place Ramp (Esc to cancel)" : "Click to place Platform (Esc to cancel)";
+    if (!pointer || (activeTool !== "ramp" && activeTool !== "landing")) return null;
+    const label = activeTool === "ramp" ? "Click to place Ramp (Esc to cancel)" : "Click to place Landing (Esc to cancel)";
     return { text: label, x: pointer.x + 10, y: pointer.y + 12 };
   }, [activeTool, pointer]);
 
@@ -630,7 +630,7 @@ export default function Canvas2D({
       };
       return <ShapeRamp2D {...rampProps} />;
     }
-    const platformProps = {
+    const landingProps = {
       key: obj.id,
       obj,
       selected: isSelected,
@@ -643,7 +643,7 @@ export default function Canvas2D({
       onDragEnd: (evt: any) => handleObjectDragEnd(evt, obj),
       ...hoverHandlers,
     };
-    return <ShapePlatform2D {...platformProps} />;
+    return <ShapeLanding2D {...landingProps} />;
   });
 
   return (
@@ -701,8 +701,8 @@ export default function Canvas2D({
                 {ghostRamp && (
                   <ShapeRamp2D obj={ghostRamp} selected={false} hover={false} activeTool={activeTool} draggable={false} ghost />
                 )}
-                {ghostPlatform && (
-                  <ShapePlatform2D obj={ghostPlatform} selected={false} hover={false} activeTool={activeTool} draggable={false} ghost />
+                {ghostLanding && (
+                  <ShapeLanding2D obj={ghostLanding} selected={false} hover={false} activeTool={activeTool} draggable={false} ghost />
                 )}
                 {pointerMmClamped && (
                   <>

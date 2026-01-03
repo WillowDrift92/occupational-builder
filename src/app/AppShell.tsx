@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { newPlatformAt, newRampAt } from "../model/defaults";
+import { newLandingAt, newRampAt } from "../model/defaults";
 import { Object2D, Snapshot, Tool } from "../model/types";
 import { centerFromTopLeftMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../model/geometry";
 import { loadProject, saveProject } from "../model/storage";
@@ -15,9 +15,9 @@ import "./styles.css";
 export type EditMode = "2d" | "3d";
 
 const statusText: Record<Tool, string> = {
-  none: "No tool selected. Click any object to select. Shortcuts: R, P, D, Esc.",
+  none: "No tool selected. Click any object to select. Shortcuts: R (Ramp), P (Landing), D, Esc.",
   ramp: "Ramp: Click on empty canvas to place once. Esc to cancel.",
-  platform: "Platform: Click on empty canvas to place once. Esc to cancel.",
+  landing: "Landing: Click on empty canvas to place once. Esc to cancel.",
   delete: "Delete: Click an object to delete, or Esc to cancel.",
 };
 
@@ -122,10 +122,10 @@ export default function AppShell() {
         setActiveTool("none");
         return;
       }
-      if (tool === "platform") {
-        const platform = newPlatformAt(xMm, yMm);
+      if (tool === "landing") {
+        const landing = newLandingAt(xMm, yMm);
         applySnapshot(
-          (present) => ({ ...present, objects: [...present.objects, platform], selectedId: platform.id }),
+          (present) => ({ ...present, objects: [...present.objects, landing], selectedId: landing.id }),
           true,
         );
         setActiveTool("none");
@@ -217,7 +217,7 @@ export default function AppShell() {
         return;
       }
       if (key === "r") setActiveTool("ramp");
-      if (key === "p") setActiveTool("platform");
+      if (key === "p") setActiveTool("landing");
       if (key === "d") setActiveTool("delete");
       if (event.key === "Backspace") {
         if (selectedId) {

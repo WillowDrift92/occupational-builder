@@ -170,6 +170,10 @@ Parameters:
 
 ## Changelog
 
+### v0.3.7
+- Standardised ramp and landing objects on a shared base shape (dimensions, elevation, rotation, locking, measurements) ready for future stairs support.
+- Updated canvas and persistence to use a landing tool/kind discriminated union with defaulted measurement fields.
+
 ### v0.3.6
 - Enlarged workspace to 40m x 40m with updated grid bounds and clamping.
 - Reduced maximum zoom-out to keep the grid comfortably visible.

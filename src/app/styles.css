@@ -239,7 +239,7 @@
 }
 
 .ob-canvasHost[data-tool="ramp"],
-.ob-canvasHost[data-tool="platform"] {
+.ob-canvasHost[data-tool="landing"] {
   cursor: crosshair;
 }
 
