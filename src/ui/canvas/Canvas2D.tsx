@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
-import { DimensionSegment } from "../../model/geometry/dimensions";
+import { DimensionSegment, PlanDimensionSegment } from "../../model/geometry/dimensions";
 import { BaseObj, LandingObj, MeasurementKey, Object2D, RampObj, Tool } from "../../model/types";
-import { newLandingAt, newRampAt } from "../../model/defaults";
+import { DEFAULT_DIMENSION_OFFSET_MM, newLandingAt, newRampAt } from "../../model/defaults";
 import { centerFromTopLeftMm, getDefaultBoundingBoxMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
 import { mmToPx, pxToMm, snapMm } from "../../model/units";
 import Grid2D from "./Grid2D";
@@ -65,6 +65,16 @@ type Camera = {
   tyPx: number;
 };
 
+type DimensionDragState = {
+  objectId: string;
+  measurementKey: MeasurementKey;
+  normal: { xMm: number; yMm: number };
+  startOffsetMm: number;
+  minOffsetMm: number;
+  startPointerMm: PointMm;
+  lastOffsetMm: number;
+};
+
 type ScreenPoint = { x: number; y: number };
 
 const SNAP_THRESHOLD_MM = 20;
@@ -74,6 +84,7 @@ const MIN_SCALE = 0.16;
 const MAX_SCALE = 10;
 const VISIBLE_RATIO = 0.6;
 const WORKSPACE_HALF_PX = mmToPx(HALF_WORKSPACE_MM);
+const DIMENSION_OFFSET_SNAP_MM = 50;
 
 const getAabbMm = (obj: Object2D, centerOverride?: PointMm): AabbMm => {
   const size = getObjectBoundingBoxMm(obj);
@@ -195,6 +206,7 @@ export default function Canvas2D({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [snapGuide, setSnapGuide] = useState<SnapGuideState>({ snappedPoint: null });
   const [spacePanning, setSpacePanning] = useState(false);
+  const [dimensionDrag, setDimensionDrag] = useState<DimensionDragState | null>(null);
   const isPanningRef = useRef(false);
   const lastPanRef = useRef<ScreenPoint | null>(null);
 
@@ -367,10 +379,55 @@ export default function Canvas2D({
     };
   }, [activeTool, desiredAnchorMm]);
 
+  const handleHoverCursor = (cursor: string | null) => {
+    if (!stageRef.current) return;
+    if (isPanningRef.current || spacePanning) return;
+    stageRef.current.container().style.cursor = cursor ?? "";
+  };
+
+  const handleBeginDimensionDrag = (segment: PlanDimensionSegment) => {
+    if (!stageRef.current || !camera) return;
+    const pos = stageRef.current.getPointerPosition();
+    if (!pos) return;
+    const pointerMm = screenToWorldMm(pos, camera);
+    const normal = segment.outwardNormal;
+    const hasNormal = Math.hypot(normal.xMm, normal.yMm) > 0;
+    if (!hasNormal) return;
+    const offsetMm = segment.offsetMm ?? DEFAULT_DIMENSION_OFFSET_MM;
+    const cursor = segment.orientation === "horizontal" ? "ns-resize" : "ew-resize";
+    stageRef.current.container().style.cursor = cursor;
+    setDimensionDrag({
+      objectId: segment.objectId,
+      measurementKey: segment.measurementKey,
+      normal,
+      startOffsetMm: offsetMm,
+      minOffsetMm: DEFAULT_DIMENSION_OFFSET_MM,
+      startPointerMm: pointerMm,
+      lastOffsetMm: offsetMm,
+    });
+  };
+
   const handleStagePointerMove = () => {
     if (!stageRef.current || !camera) return;
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
+
+    if (dimensionDrag) {
+      const pointerMm = screenToWorldMm(pos, camera);
+      const normal = dimensionDrag.normal;
+      const dot =
+        (pointerMm.xMm - dimensionDrag.startPointerMm.xMm) * normal.xMm +
+        (pointerMm.yMm - dimensionDrag.startPointerMm.yMm) * normal.yMm;
+      const outwardDelta = Math.max(0, dot);
+      const rawOffset = dimensionDrag.startOffsetMm + outwardDelta;
+      const snapped = Math.max(dimensionDrag.minOffsetMm, snapMm(rawOffset, DIMENSION_OFFSET_SNAP_MM));
+      if (snapped !== dimensionDrag.lastOffsetMm) {
+        onUpdateObject(dimensionDrag.objectId, { dimensionOffsetsMm: { [dimensionDrag.measurementKey]: snapped } }, false);
+        setDimensionDrag((current) => (current ? { ...current, lastOffsetMm: snapped } : current));
+      }
+      setPointer({ x: pos.x, y: pos.y });
+      return;
+    }
 
     if (isPanningRef.current) {
       const last = lastPanRef.current ?? pos;
@@ -396,16 +453,33 @@ export default function Canvas2D({
   };
 
   const handleStageMouseUp = () => {
+    if (dimensionDrag) {
+      const finalOffset = dimensionDrag.lastOffsetMm ?? dimensionDrag.startOffsetMm;
+      onUpdateObject(dimensionDrag.objectId, { dimensionOffsetsMm: { [dimensionDrag.measurementKey]: finalOffset } }, true);
+      setDimensionDrag(null);
+    }
+    if (stageRef.current) {
+      stageRef.current.container().style.cursor = "";
+    }
     stopPanning();
   };
 
   const handleStageLeave = () => {
     stopPanning();
+    if (dimensionDrag) {
+      const finalOffset = dimensionDrag.lastOffsetMm ?? dimensionDrag.startOffsetMm;
+      onUpdateObject(dimensionDrag.objectId, { dimensionOffsetsMm: { [dimensionDrag.measurementKey]: finalOffset } }, true);
+      setDimensionDrag(null);
+    }
+    if (stageRef.current) {
+      stageRef.current.container().style.cursor = "";
+    }
     setPointer(null);
     setHoverId(null);
   };
 
   const handleStageMouseDown = (evt: any) => {
+    if (dimensionDrag) return;
     if (!stageRef.current || !camera) return;
     const pos = stageRef.current.getPointerPosition();
     if (!pos) return;
@@ -693,6 +767,8 @@ export default function Canvas2D({
                   selectedMeasurementKey={selectedMeasurementKey}
                   onSelect={onSelect}
                   onSelectMeasurement={onSelectMeasurement}
+                  onBeginDrag={handleBeginDimensionDrag}
+                  onHoverCursor={handleHoverCursor}
                 />
               </Group>
             </Layer>
