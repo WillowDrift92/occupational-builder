@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
+import { DimensionSegment } from "../../model/geometry/dimensions";
 import { BaseObj, LandingObj, MeasurementKey, Object2D, RampObj, Tool } from "../../model/types";
 import { newLandingAt, newRampAt } from "../../model/defaults";
 import { centerFromTopLeftMm, getDefaultBoundingBoxMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
@@ -18,6 +19,7 @@ type Canvas2DProps = {
   activeTool: Tool;
   snapOn: boolean;
   objects: Object2D[];
+  dimensions: DimensionSegment[];
   selectedId: string | null;
   selectedMeasurementKey: MeasurementKey | null;
   onSelect: (id: string) => void;
@@ -174,6 +176,7 @@ export default function Canvas2D({
   activeTool,
   snapOn,
   objects,
+  dimensions,
   selectedId,
   selectedMeasurementKey,
   onSelect,
@@ -684,6 +687,7 @@ export default function Canvas2D({
               <Group {...worldGroupProps} {...workspaceClip}>
                 <Dimensions2D
                   objects={objects}
+                  dimensions={dimensions}
                   cameraScale={camera.scale}
                   selectedId={selectedId}
                   selectedMeasurementKey={selectedMeasurementKey}
