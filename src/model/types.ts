@@ -19,6 +19,8 @@ export type MeasurementAnchors = Record<MeasurementKey, MeasurementAnchor>;
 
 export type MeasurementAnchorsPatch = Partial<Record<MeasurementKey, Partial<MeasurementAnchor>>>;
 
+export type DimensionOffsetsMm = Partial<Record<MeasurementKey, number>>;
+
 export type BaseObj = {
   id: string;
   kind: ObjectKind;
@@ -32,6 +34,7 @@ export type BaseObj = {
   locked: boolean;
   measurements: MeasurementState;
   measurementAnchors: MeasurementAnchors;
+  dimensionOffsetsMm: DimensionOffsetsMm;
 };
 
 export type RampObj = BaseObj & {
