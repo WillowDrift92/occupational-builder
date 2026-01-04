@@ -12,7 +12,6 @@ import {
   MEASUREMENT_KEYS,
   MeasurementAnchors,
   MeasurementKey,
-  MeasurementLabelPositions,
   MeasurementState,
   Object2D,
   RampObj,
@@ -102,22 +101,6 @@ const normaliseMeasurementAnchors = (value: any): MeasurementAnchors => {
   );
 };
 
-const normaliseMeasurementLabels = (value: any): MeasurementLabelPositions => {
-  const toPosition = (candidate: any) => {
-    const xMm = isNumber(candidate?.xMm) ? candidate.xMm : 0;
-    const yMm = isNumber(candidate?.yMm) ? candidate.yMm : 0;
-    return { xMm, yMm };
-  };
-
-  return MEASUREMENT_KEYS.reduce<MeasurementLabelPositions>((acc, key) => {
-    if (key === "H" || key === "E") {
-      const raw = value?.[key];
-      acc[key] = toPosition(raw);
-    }
-    return acc;
-  }, {});
-};
-
 const toRamp = (value: any): RampObj | null => {
   if (!value || value.kind !== "ramp" || !isString(value.id) || !isNumber(value.xMm) || !isNumber(value.yMm)) return null;
 
@@ -138,7 +121,6 @@ const toRamp = (value: any): RampObj | null => {
     locked: isBoolean(value.locked) ? value.locked : false,
     measurements: normaliseMeasurements(value.measurements, value.elevationMm ?? 0),
     measurementAnchors: normaliseMeasurementAnchors(value.measurementAnchors),
-    measurementLabels: normaliseMeasurementLabels(value.measurementLabels),
     runMm: isNumber(value.runMm) ? value.runMm : lengthMm,
     showArrow: isBoolean(value.showArrow) ? value.showArrow : true,
     hasLeftWing: isBoolean(value.hasLeftWing) ? value.hasLeftWing : false,
@@ -179,7 +161,6 @@ const toLanding = (value: any): LandingObj | null => {
     locked: isBoolean(value.locked) ? value.locked : false,
     measurements: normaliseMeasurements(value.measurements, value.elevationMm ?? 0),
     measurementAnchors: normaliseMeasurementAnchors(value.measurementAnchors),
-    measurementLabels: normaliseMeasurementLabels(value.measurementLabels),
   };
 };
 
@@ -195,23 +176,10 @@ const cloneMeasurements = (value: MeasurementState): MeasurementState =>
 const cloneMeasurementAnchors = (value: MeasurementAnchors): MeasurementAnchors =>
   MEASUREMENT_KEYS.reduce<MeasurementAnchors>((acc, key) => ({ ...acc, [key]: { ...value[key] } }), {} as MeasurementAnchors);
 
-const cloneMeasurementLabels = (value: MeasurementLabelPositions): MeasurementLabelPositions =>
-  MEASUREMENT_KEYS.reduce<MeasurementLabelPositions>((acc, key) => ({ ...acc, [key]: value[key] ? { ...value[key] } : undefined }), {});
-
 const cloneObject = (obj: Object2D): Object2D =>
   obj.kind === "ramp"
-    ? {
-        ...obj,
-        measurements: cloneMeasurements(obj.measurements),
-        measurementAnchors: cloneMeasurementAnchors(obj.measurementAnchors),
-        measurementLabels: cloneMeasurementLabels(obj.measurementLabels),
-      }
-    : {
-        ...obj,
-        measurements: cloneMeasurements(obj.measurements),
-        measurementAnchors: cloneMeasurementAnchors(obj.measurementAnchors),
-        measurementLabels: cloneMeasurementLabels(obj.measurementLabels),
-      };
+    ? { ...obj, measurements: cloneMeasurements(obj.measurements), measurementAnchors: cloneMeasurementAnchors(obj.measurementAnchors) }
+    : { ...obj, measurements: cloneMeasurements(obj.measurements), measurementAnchors: cloneMeasurementAnchors(obj.measurementAnchors) };
 
 const isPersistedEnvelope = (value: any): value is PersistedEnvelope =>
   value &&

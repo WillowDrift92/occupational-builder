@@ -13,9 +13,6 @@ export const cloneSnapshot = (snapshot: Snapshot): Snapshot => ({
   objects: snapshot.objects.map((obj) => ({
     ...obj,
     measurements: { ...obj.measurements },
-    measurementLabels: Object.fromEntries(
-      Object.entries(obj.measurementLabels).map(([key, value]) => [key, value ? { ...value } : undefined]),
-    ) as Snapshot["objects"][number]["measurementLabels"],
     measurementAnchors: Object.fromEntries(
       Object.entries(obj.measurementAnchors).map(([key, value]) => [key, { ...value }]),
     ) as Snapshot["objects"][number]["measurementAnchors"],
