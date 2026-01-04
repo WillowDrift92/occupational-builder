@@ -1,6 +1,6 @@
 import { DEFAULT_MEASUREMENT_OFFSET_MM } from "../defaults";
 import { MeasurementAnchor, MeasurementKey, Object2D, RampObj } from "../types";
-import { getObjectBoundingBoxMm, getRampBoundingBoxMm, topLeftFromCenterMm, type PointMm } from "../geometry";
+import { getObjectBoundingBoxMm, topLeftFromCenterMm, type PointMm } from "../geometry";
 
 export type DimensionSegmentVariant = "length" | "width" | "wing" | "height" | "elevation";
 
@@ -13,11 +13,6 @@ export type DimensionSegment = {
   label: string;
   variant: DimensionSegmentVariant;
   tickLengthMm: number;
-  anchorOffsetMm?: number;
-  anchorOriginMm?: PointMm;
-  anchorDirectionMm?: PointMm;
-  anchorScale?: number;
-  labelPositionMm?: PointMm;
 };
 
 export const DIMENSION_TICK_LENGTH_MM = 80;
@@ -81,7 +76,6 @@ const buildWingDimensionSegment = (obj: RampObj, side: "left" | "right"): Dimens
 
   const baseWorld = { xMm: obj.xMm + baseRotated.xMm + offset.xMm, yMm: obj.yMm + baseRotated.yMm + offset.yMm };
   const tipWorld = { xMm: obj.xMm + tipRotated.xMm + offset.xMm, yMm: obj.yMm + tipRotated.yMm + offset.yMm };
-  const originWorld = { xMm: obj.xMm + baseRotated.xMm, yMm: obj.yMm + baseRotated.yMm };
 
   const startMm = { xMm: baseWorld.xMm, yMm: baseWorld.yMm };
   const endMm =
@@ -96,17 +90,11 @@ const buildWingDimensionSegment = (obj: RampObj, side: "left" | "right"): Dimens
     label: formatMm(wingSize),
     variant: "wing",
     tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-    anchorOffsetMm: anchor.offsetMm,
-    anchorOriginMm: originWorld,
-    anchorDirectionMm: lengthDirection,
   };
 };
 
-const getDimensionBoundingBox = (obj: Object2D) =>
-  obj.kind === "ramp" ? getRampBoundingBoxMm(obj, { includeWings: false }) : getObjectBoundingBoxMm(obj);
-
 const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
-  const bbox = getDimensionBoundingBox(obj);
+  const bbox = getObjectBoundingBoxMm(obj);
   const topLeft = topLeftFromCenterMm({ xMm: obj.xMm, yMm: obj.yMm }, bbox);
   const left = topLeft.xMm;
   const right = left + bbox.widthMm;
@@ -120,8 +108,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
     const anchor = getAnchor(obj, "L1");
     const orientation = anchor.orientation === "auto" ? (verticalLength ? "vertical" : "horizontal") : anchor.orientation;
     const offset = anchor.offsetMm;
-    const anchorDirectionMm = orientation === "vertical" ? { xMm: -1, yMm: 0 } : { xMm: 0, yMm: -1 };
-    const anchorOriginMm = orientation === "vertical" ? { xMm: left, yMm: top } : { xMm: left, yMm: top };
     segments.push(
       orientation === "vertical"
         ? {
@@ -133,9 +119,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(bottom - top),
             variant: "length",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           }
         : {
             measurementKey: "L1",
@@ -146,9 +129,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(right - left),
             variant: "length",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           },
     );
   }
@@ -157,8 +137,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
     const anchor = getAnchor(obj, "L2");
     const orientation = anchor.orientation === "auto" ? (verticalLength ? "vertical" : "horizontal") : anchor.orientation;
     const offset = anchor.offsetMm;
-    const anchorDirectionMm = orientation === "vertical" ? { xMm: 1, yMm: 0 } : { xMm: 0, yMm: 1 };
-    const anchorOriginMm = orientation === "vertical" ? { xMm: right, yMm: top } : { xMm: left, yMm: bottom };
     segments.push(
       orientation === "vertical"
         ? {
@@ -170,9 +148,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(bottom - top),
             variant: "length",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           }
         : {
             measurementKey: "L2",
@@ -183,9 +158,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(right - left),
             variant: "length",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           },
     );
   }
@@ -194,8 +166,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
     const anchor = getAnchor(obj, "W1");
     const orientation = anchor.orientation === "auto" ? (verticalLength ? "horizontal" : "vertical") : anchor.orientation;
     const offset = anchor.offsetMm;
-    const anchorDirectionMm = orientation === "horizontal" ? { xMm: 0, yMm: -1 } : { xMm: -1, yMm: 0 };
-    const anchorOriginMm = orientation === "horizontal" ? { xMm: left, yMm: top } : { xMm: left, yMm: top };
     segments.push(
       orientation === "horizontal"
         ? {
@@ -207,9 +177,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(right - left),
             variant: "width",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           }
         : {
             measurementKey: "W1",
@@ -220,9 +187,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(bottom - top),
             variant: "width",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           },
     );
   }
@@ -231,8 +195,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
     const anchor = getAnchor(obj, "W2");
     const orientation = anchor.orientation === "auto" ? (verticalLength ? "horizontal" : "vertical") : anchor.orientation;
     const offset = anchor.offsetMm;
-    const anchorDirectionMm = orientation === "horizontal" ? { xMm: 0, yMm: 1 } : { xMm: 1, yMm: 0 };
-    const anchorOriginMm = orientation === "horizontal" ? { xMm: left, yMm: bottom } : { xMm: right, yMm: top };
     segments.push(
       orientation === "horizontal"
         ? {
@@ -244,9 +206,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(right - left),
             variant: "width",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           }
         : {
             measurementKey: "W2",
@@ -257,9 +216,6 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
             label: formatMm(bottom - top),
             variant: "width",
             tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-            anchorOffsetMm: offset,
-            anchorOriginMm,
-            anchorDirectionMm,
           },
     );
   }
@@ -275,7 +231,7 @@ const buildEdgeDimensionSegments = (obj: Object2D): DimensionSegment[] => {
 };
 
 const buildBracketSegments = (obj: Object2D): DimensionSegment[] => {
-  const bbox = getDimensionBoundingBox(obj);
+  const bbox = getObjectBoundingBoxMm(obj);
   const topLeft = topLeftFromCenterMm({ xMm: obj.xMm, yMm: obj.yMm }, bbox);
   const left = topLeft.xMm;
   const top = topLeft.yMm;
@@ -292,8 +248,6 @@ const buildBracketSegments = (obj: Object2D): DimensionSegment[] => {
   if (shouldShowHeight) {
     const anchor = getAnchor(obj, "H");
     const halfLength = anchor.offsetMm / 2;
-    const labelOffset = obj.measurementLabels?.H ?? { xMm: 0, yMm: 0 };
-    const labelPositionMm = { xMm: obj.xMm + labelOffset.xMm, yMm: centerY + labelOffset.yMm };
     brackets.push({
       measurementKey: "H",
       objectId: obj.id,
@@ -303,19 +257,12 @@ const buildBracketSegments = (obj: Object2D): DimensionSegment[] => {
       label: `H ${formatMm(obj.heightMm)}`,
       variant: "height",
       tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-      anchorOffsetMm: anchor.offsetMm,
-      anchorOriginMm: { xMm: obj.xMm, yMm: centerY },
-      anchorDirectionMm: { xMm: 1, yMm: 0 },
-      anchorScale: 2,
-      labelPositionMm,
     });
   }
 
   if (shouldShowElevation) {
     const anchor = getAnchor(obj, "E");
     const offset = anchor.offsetMm / 2 + DIMENSION_BRACKET_SPACING_MM;
-    const labelOffset = obj.measurementLabels?.E ?? { xMm: 0, yMm: 0 };
-    const labelPositionMm = { xMm: left - offset + labelOffset.xMm, yMm: top - DIMENSION_BRACKET_HEIGHT_MM + labelOffset.yMm };
     brackets.push({
       measurementKey: "E",
       objectId: obj.id,
@@ -325,11 +272,6 @@ const buildBracketSegments = (obj: Object2D): DimensionSegment[] => {
       label: `E ${formatMm(obj.elevationMm)}`,
       variant: "elevation",
       tickLengthMm: DIMENSION_TICK_LENGTH_MM,
-      anchorOffsetMm: anchor.offsetMm,
-      anchorOriginMm: { xMm: left - DIMENSION_BRACKET_SPACING_MM, yMm: top },
-      anchorDirectionMm: { xMm: -1, yMm: 0 },
-      anchorScale: 2,
-      labelPositionMm,
     });
   }
 
