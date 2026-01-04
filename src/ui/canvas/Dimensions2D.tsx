@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Group, Line, Rect, Text } from "react-konva";
+import { Group, Line, Text } from "react-konva";
 import type { DimensionSegment } from "../../model/geometry/dimensions";
 import { MeasurementKey, Object2D } from "../../model/types";
 import { mmToPx } from "../../model/units";
@@ -14,8 +14,12 @@ type Dimensions2DProps = {
   onSelectMeasurement: (id: string, key: MeasurementKey) => void;
 };
 
-const LABEL_PADDING = 6;
 const LABEL_FONT_SIZE = 14;
+
+const DIMENSION_COLOR = "#2563eb";
+const SELECTED_DIMENSION_COLOR = "#1d4ed8";
+const TEXT_COLOR = "#0f172a";
+const MIN_HIT_WIDTH_PX = 10;
 
 const measureTextWidth = (text: string, fontSize: number) => text.length * fontSize * 0.6;
 
@@ -37,28 +41,24 @@ const DimensionLine = ({
   isSelected,
   onPointerDown,
 }: DimensionLineProps) => {
-  const strokeWidth = 2 / cameraScale;
-  const hitStrokeWidth = 10 / cameraScale;
-  const fontSize = LABEL_FONT_SIZE / cameraScale;
-  const padding = LABEL_PADDING / cameraScale;
+  const strokeWidth = isSelected ? 3 : 2;
+  const hitStrokeWidth = Math.max(MIN_HIT_WIDTH_PX / cameraScale, strokeWidth);
+  const fontSize = LABEL_FONT_SIZE;
   const startPx = { x: mmToPx(startMm.xMm), y: mmToPx(startMm.yMm) };
   const endPx = { x: mmToPx(endMm.xMm), y: mmToPx(endMm.yMm) };
   const tickHalf = mmToPx(tickLengthMm) / 2;
   const center = { x: (startPx.x + endPx.x) / 2, y: (startPx.y + endPx.y) / 2 };
-  const labelWidth = measureTextWidth(label, fontSize) + padding * 2;
-  const labelHeight = fontSize + padding * 2;
+  const labelWidth = measureTextWidth(label, fontSize);
 
-  const labelX =
-    orientation === "horizontal" ? center.x - labelWidth / 2 : Math.min(startPx.x, endPx.x) - labelWidth - padding;
-  const labelY = center.y - labelHeight / 2;
+  const labelX = center.x;
+  const labelY = center.y;
 
   const handlePointerDown = (evt: any) => {
     evt.cancelBubble = true;
     onPointerDown();
   };
 
-  const fillColor = isSelected ? "#dbeafe" : "#f8fafc";
-  const strokeColor = isSelected ? "#2563eb" : color;
+  const strokeColor = isSelected ? SELECTED_DIMENSION_COLOR : color;
 
   return (
     <Group onPointerDown={handlePointerDown} listening>
@@ -67,22 +67,22 @@ const DimensionLine = ({
         stroke={strokeColor}
         strokeWidth={strokeWidth}
         hitStrokeWidth={hitStrokeWidth}
-        lineCap="butt"
+        lineCap="square"
       />
       {orientation === "horizontal" ? (
         <>
           <Line
             points={[startPx.x, startPx.y - tickHalf, startPx.x, startPx.y + tickHalf]}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            hitStrokeWidth={hitStrokeWidth}
-          />
-          <Line
-            points={[endPx.x, endPx.y - tickHalf, endPx.x, endPx.y + tickHalf]}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            hitStrokeWidth={hitStrokeWidth}
-          />
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          hitStrokeWidth={hitStrokeWidth}
+        />
+        <Line
+          points={[endPx.x, endPx.y - tickHalf, endPx.x, endPx.y + tickHalf]}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          hitStrokeWidth={hitStrokeWidth}
+        />
         </>
       ) : (
         <>
@@ -90,27 +90,30 @@ const DimensionLine = ({
             points={[startPx.x - tickHalf, startPx.y, startPx.x + tickHalf, startPx.y]}
             stroke={strokeColor}
             strokeWidth={strokeWidth}
-            hitStrokeWidth={hitStrokeWidth}
-          />
-          <Line
-            points={[endPx.x - tickHalf, endPx.y, endPx.x + tickHalf, endPx.y]}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            hitStrokeWidth={hitStrokeWidth}
-          />
+          hitStrokeWidth={hitStrokeWidth}
+        />
+        <Line
+          points={[endPx.x - tickHalf, endPx.y, endPx.x + tickHalf, endPx.y]}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          hitStrokeWidth={hitStrokeWidth}
+        />
         </>
       )}
-      <Rect
+      <Text
         x={labelX}
         y={labelY}
+        offsetX={labelWidth / 2}
+        offsetY={fontSize / 2}
         width={labelWidth}
-        height={labelHeight}
-        fill={fillColor}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        cornerRadius={4 / cameraScale}
+        height={fontSize}
+        text={label}
+        fontSize={fontSize}
+        fill={TEXT_COLOR}
+        align="center"
+        wrap="none"
+        listening={false}
       />
-      <Text x={labelX + padding} y={labelY + padding} text={label} fontSize={fontSize} fill={strokeColor} />
     </Group>
   );
 };
@@ -136,7 +139,7 @@ export default function Dimensions2D({
       {objects.map((obj) => {
         const lines = dimensionsByObject[obj.id] ?? [];
         if (lines.length === 0) return null;
-        const color = obj.id === selectedId ? "#2563eb" : obj.locked ? "#94a3b8" : "#0f172a";
+        const color = DIMENSION_COLOR;
         return (
           <Group key={`dim-${obj.id}`}>
             {lines.map((line, idx) => (
