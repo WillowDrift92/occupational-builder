@@ -170,6 +170,9 @@ Parameters:
 
 ## Changelog
 
+### v0.5.4
+- Simplified 2D dimension rendering with centered text labels, CAD-like ticks, and consistent scaling/hit areas aligned to the world view.
+
 ### v0.5.3
 - Fixed the Inspector crash on load by safely handling empty selections.
 - Added a shared dimension geometry generator to supply reusable annotated segments for current 2D and future 3D renderers.
