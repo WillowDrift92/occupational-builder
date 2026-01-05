@@ -170,11 +170,6 @@ Parameters:
 
 ## Changelog
 
-### v0.5.3
-- Fixed the Inspector crash on load by safely handling empty selections.
-- Added a shared dimension geometry generator to supply reusable annotated segments for current 2D and future 3D renderers.
-- Added a preview dimension overlay contract so the 3D preview can mirror tick styling and placement when rendering dimensions.
-
 ### v0.5.2
 - Added wing-specific measurement toggles and wing dimension lines that follow wing extensions, enforced vertical-only height/elevation brackets, and kept measurement rendering crisp under zoom with live values from ramp props.
 

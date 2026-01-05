@@ -179,7 +179,7 @@ export default function Inspector({ selected, onUpdateObject, onRotateSelected }
     if (!selected || selected.kind !== "ramp") return null;
     return computeRampSlope(selected.lengthMm, selected.heightMm);
   }, [selected?.kind, selected?.lengthMm, selected?.heightMm]);
-  const isRamp = selected?.kind === "ramp";
+  const isRamp = selected.kind === "ramp";
 
   if (!selected) {
     return (
