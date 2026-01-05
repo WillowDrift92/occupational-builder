@@ -1,11 +1,9 @@
 import { Group, Line, Rect, Text } from "react-konva";
 import { getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
-import { DEFAULT_MEASUREMENT_OFFSET_MM } from "../../model/defaults";
-import { MeasurementAnchor, MeasurementKey, Object2D } from "../../model/types";
+import { Object2D } from "../../model/types";
 import { mmToPx } from "../../model/units";
 
 type DimensionLineSpec = {
-  measurementKey: MeasurementKey;
   startMm: { xMm: number; yMm: number };
   endMm: { xMm: number; yMm: number };
   orientation: "horizontal" | "vertical";
@@ -16,11 +14,10 @@ type Dimensions2DProps = {
   objects: Object2D[];
   cameraScale: number;
   selectedId: string | null;
-  selectedMeasurementKey: MeasurementKey | null;
   onSelect: (id: string) => void;
-  onSelectMeasurement: (id: string, key: MeasurementKey) => void;
 };
 
+const DIM_OFFSET_MM = 200;
 const TICK_LENGTH_MM = 80;
 const BRACKET_HEIGHT_MM = 160;
 const BRACKET_SPACING_MM = 60;
@@ -44,20 +41,10 @@ const formatMm = (valueMm: number) => `${Math.round(valueMm)}mm`;
 type DimensionLineProps = DimensionLineSpec & {
   cameraScale: number;
   color: string;
-  isSelected: boolean;
   onPointerDown: () => void;
 };
 
-const DimensionLine = ({
-  startMm,
-  endMm,
-  orientation,
-  label,
-  cameraScale,
-  color,
-  isSelected,
-  onPointerDown,
-}: DimensionLineProps) => {
+const DimensionLine = ({ startMm, endMm, orientation, label, cameraScale, color, onPointerDown }: DimensionLineProps) => {
   const strokeWidth = 2 / cameraScale;
   const hitStrokeWidth = 10 / cameraScale;
   const fontSize = LABEL_FONT_SIZE / cameraScale;
@@ -78,14 +65,11 @@ const DimensionLine = ({
     onPointerDown();
   };
 
-  const fillColor = isSelected ? "#dbeafe" : "#f8fafc";
-  const strokeColor = isSelected ? "#2563eb" : color;
-
   return (
     <Group onPointerDown={handlePointerDown} listening>
       <Line
         points={[startPx.x, startPx.y, endPx.x, endPx.y]}
-        stroke={strokeColor}
+        stroke={color}
         strokeWidth={strokeWidth}
         hitStrokeWidth={hitStrokeWidth}
         lineCap="butt"
@@ -94,13 +78,13 @@ const DimensionLine = ({
         <>
           <Line
             points={[startPx.x, startPx.y - tickHalf, startPx.x, startPx.y + tickHalf]}
-            stroke={strokeColor}
+            stroke={color}
             strokeWidth={strokeWidth}
             hitStrokeWidth={hitStrokeWidth}
           />
           <Line
             points={[endPx.x, endPx.y - tickHalf, endPx.x, endPx.y + tickHalf]}
-            stroke={strokeColor}
+            stroke={color}
             strokeWidth={strokeWidth}
             hitStrokeWidth={hitStrokeWidth}
           />
@@ -109,13 +93,13 @@ const DimensionLine = ({
         <>
           <Line
             points={[startPx.x - tickHalf, startPx.y, startPx.x + tickHalf, startPx.y]}
-            stroke={strokeColor}
+            stroke={color}
             strokeWidth={strokeWidth}
             hitStrokeWidth={hitStrokeWidth}
           />
           <Line
             points={[endPx.x - tickHalf, endPx.y, endPx.x + tickHalf, endPx.y]}
-            stroke={strokeColor}
+            stroke={color}
             strokeWidth={strokeWidth}
             hitStrokeWidth={hitStrokeWidth}
           />
@@ -126,19 +110,15 @@ const DimensionLine = ({
         y={labelY}
         width={labelWidth}
         height={labelHeight}
-        fill={fillColor}
-        stroke={strokeColor}
+        fill="#f8fafc"
+        stroke={color}
         strokeWidth={strokeWidth}
         cornerRadius={4 / cameraScale}
       />
-      <Text x={labelX + padding} y={labelY + padding} text={label} fontSize={fontSize} fill={strokeColor} />
+      <Text x={labelX + padding} y={labelY + padding} text={label} fontSize={fontSize} fill={color} />
     </Group>
   );
 };
-
-const defaultAnchor: MeasurementAnchor = { offsetMm: DEFAULT_MEASUREMENT_OFFSET_MM, orientation: "auto" };
-
-const getAnchor = (obj: Object2D, key: MeasurementKey): MeasurementAnchor => obj.measurementAnchors?.[key] ?? defaultAnchor;
 
 const buildDimensionLines = (obj: Object2D): DimensionLineSpec[] => {
   const bbox = getObjectBoundingBoxMm(obj);
@@ -152,22 +132,17 @@ const buildDimensionLines = (obj: Object2D): DimensionLineSpec[] => {
   const lines: DimensionLineSpec[] = [];
 
   if (obj.measurements.L1) {
-    const anchor = getAnchor(obj, "L1");
-    const orientation = anchor.orientation === "auto" ? (verticalLength ? "vertical" : "horizontal") : anchor.orientation;
-    const offset = anchor.offsetMm;
     lines.push(
-      orientation === "vertical"
+      verticalLength
         ? {
-            measurementKey: "L1",
-            startMm: { xMm: left - offset, yMm: top },
-            endMm: { xMm: left - offset, yMm: bottom },
+            startMm: { xMm: left - DIM_OFFSET_MM, yMm: top },
+            endMm: { xMm: left - DIM_OFFSET_MM, yMm: bottom },
             orientation: "vertical",
             label: formatMm(bottom - top),
           }
         : {
-            measurementKey: "L1",
-            startMm: { xMm: left, yMm: top - offset },
-            endMm: { xMm: right, yMm: top - offset },
+            startMm: { xMm: left, yMm: top - DIM_OFFSET_MM },
+            endMm: { xMm: right, yMm: top - DIM_OFFSET_MM },
             orientation: "horizontal",
             label: formatMm(right - left),
           },
@@ -175,22 +150,17 @@ const buildDimensionLines = (obj: Object2D): DimensionLineSpec[] => {
   }
 
   if (obj.measurements.L2) {
-    const anchor = getAnchor(obj, "L2");
-    const orientation = anchor.orientation === "auto" ? (verticalLength ? "vertical" : "horizontal") : anchor.orientation;
-    const offset = anchor.offsetMm;
     lines.push(
-      orientation === "vertical"
+      verticalLength
         ? {
-            measurementKey: "L2",
-            startMm: { xMm: right + offset, yMm: top },
-            endMm: { xMm: right + offset, yMm: bottom },
+            startMm: { xMm: right + DIM_OFFSET_MM, yMm: top },
+            endMm: { xMm: right + DIM_OFFSET_MM, yMm: bottom },
             orientation: "vertical",
             label: formatMm(bottom - top),
           }
         : {
-            measurementKey: "L2",
-            startMm: { xMm: left, yMm: bottom + offset },
-            endMm: { xMm: right, yMm: bottom + offset },
+            startMm: { xMm: left, yMm: bottom + DIM_OFFSET_MM },
+            endMm: { xMm: right, yMm: bottom + DIM_OFFSET_MM },
             orientation: "horizontal",
             label: formatMm(right - left),
           },
@@ -198,22 +168,17 @@ const buildDimensionLines = (obj: Object2D): DimensionLineSpec[] => {
   }
 
   if (obj.measurements.W1) {
-    const anchor = getAnchor(obj, "W1");
-    const orientation = anchor.orientation === "auto" ? (verticalLength ? "horizontal" : "vertical") : anchor.orientation;
-    const offset = anchor.offsetMm;
     lines.push(
-      orientation === "horizontal"
+      verticalLength
         ? {
-            measurementKey: "W1",
-            startMm: { xMm: left, yMm: top - offset },
-            endMm: { xMm: right, yMm: top - offset },
+            startMm: { xMm: left, yMm: top - DIM_OFFSET_MM },
+            endMm: { xMm: right, yMm: top - DIM_OFFSET_MM },
             orientation: "horizontal",
             label: formatMm(right - left),
           }
         : {
-            measurementKey: "W1",
-            startMm: { xMm: left - offset, yMm: top },
-            endMm: { xMm: left - offset, yMm: bottom },
+            startMm: { xMm: left - DIM_OFFSET_MM, yMm: top },
+            endMm: { xMm: left - DIM_OFFSET_MM, yMm: bottom },
             orientation: "vertical",
             label: formatMm(bottom - top),
           },
@@ -221,22 +186,17 @@ const buildDimensionLines = (obj: Object2D): DimensionLineSpec[] => {
   }
 
   if (obj.measurements.W2) {
-    const anchor = getAnchor(obj, "W2");
-    const orientation = anchor.orientation === "auto" ? (verticalLength ? "horizontal" : "vertical") : anchor.orientation;
-    const offset = anchor.offsetMm;
     lines.push(
-      orientation === "horizontal"
+      verticalLength
         ? {
-            measurementKey: "W2",
-            startMm: { xMm: left, yMm: bottom + offset },
-            endMm: { xMm: right, yMm: bottom + offset },
+            startMm: { xMm: left, yMm: bottom + DIM_OFFSET_MM },
+            endMm: { xMm: right, yMm: bottom + DIM_OFFSET_MM },
             orientation: "horizontal",
             label: formatMm(right - left),
           }
         : {
-            measurementKey: "W2",
-            startMm: { xMm: right + offset, yMm: top },
-            endMm: { xMm: right + offset, yMm: bottom },
+            startMm: { xMm: right + DIM_OFFSET_MM, yMm: top },
+            endMm: { xMm: right + DIM_OFFSET_MM, yMm: bottom },
             orientation: "vertical",
             label: formatMm(bottom - top),
           },
@@ -261,62 +221,28 @@ const buildBracketLines = (obj: Object2D): DimensionLineSpec[] => {
   }
 
   if (shouldShowHeight) {
-    const anchor = getAnchor(obj, "H");
-    const orientation = anchor.orientation === "auto" ? "vertical" : anchor.orientation;
-    const offset = anchor.offsetMm / 2;
-    brackets.push(
-      orientation === "vertical"
-        ? {
-            measurementKey: "H",
-            startMm: { xMm: left - offset, yMm: top },
-            endMm: { xMm: left - offset, yMm: top - BRACKET_HEIGHT_MM },
-            orientation: "vertical",
-            label: `H ${formatMm(obj.heightMm)}`,
-          }
-        : {
-            measurementKey: "H",
-            startMm: { xMm: left, yMm: top - offset },
-            endMm: { xMm: left + BRACKET_HEIGHT_MM, yMm: top - offset },
-            orientation: "horizontal",
-            label: `H ${formatMm(obj.heightMm)}`,
-          },
-    );
+    brackets.push({
+      startMm: { xMm: left - DIM_OFFSET_MM / 2, yMm: top },
+      endMm: { xMm: left - DIM_OFFSET_MM / 2, yMm: top - BRACKET_HEIGHT_MM },
+      orientation: "vertical",
+      label: `H ${formatMm(obj.heightMm)}`,
+    });
   }
 
   if (shouldShowElevation) {
-    const anchor = getAnchor(obj, "E");
-    const orientation = anchor.orientation === "auto" ? "vertical" : anchor.orientation;
-    const offset = anchor.offsetMm / 2 + BRACKET_SPACING_MM;
-    brackets.push(
-      orientation === "vertical"
-        ? {
-            measurementKey: "E",
-            startMm: { xMm: left - offset, yMm: top },
-            endMm: { xMm: left - offset, yMm: top - BRACKET_HEIGHT_MM },
-            orientation: "vertical",
-            label: `E ${formatMm(obj.elevationMm)}`,
-          }
-        : {
-            measurementKey: "E",
-            startMm: { xMm: left, yMm: top - offset },
-            endMm: { xMm: left + BRACKET_HEIGHT_MM, yMm: top - offset },
-            orientation: "horizontal",
-            label: `E ${formatMm(obj.elevationMm)}`,
-          },
-    );
+    const offsetX = left - DIM_OFFSET_MM / 2 - BRACKET_SPACING_MM;
+    brackets.push({
+      startMm: { xMm: offsetX, yMm: top },
+      endMm: { xMm: offsetX, yMm: top - BRACKET_HEIGHT_MM },
+      orientation: "vertical",
+      label: `E ${formatMm(obj.elevationMm)}`,
+    });
   }
 
   return brackets;
 };
 
-export default function Dimensions2D({
-  objects,
-  cameraScale,
-  selectedId,
-  selectedMeasurementKey,
-  onSelect,
-  onSelectMeasurement,
-}: Dimensions2DProps) {
+export default function Dimensions2D({ objects, cameraScale, selectedId, onSelect }: Dimensions2DProps) {
   return (
     <Group>
       {objects.map((obj) => {
@@ -331,8 +257,7 @@ export default function Dimensions2D({
                 {...line}
                 cameraScale={cameraScale}
                 color={color}
-                isSelected={selectedMeasurementKey === line.measurementKey && selectedId === obj.id}
-                onPointerDown={() => onSelectMeasurement(obj.id, line.measurementKey)}
+                onPointerDown={() => onSelect(obj.id)}
               />
             ))}
           </Group>

@@ -4,20 +4,7 @@ export type ObjectKind = "ramp" | "landing" | "stairs";
 
 export type MeasurementKey = "L1" | "L2" | "W1" | "W2" | "H" | "E";
 
-export const MEASUREMENT_KEYS: MeasurementKey[] = ["L1", "L2", "W1", "W2", "H", "E"];
-
 export type MeasurementState = Record<MeasurementKey, boolean>;
-
-export type MeasurementAnchorOrientation = "horizontal" | "vertical" | "auto";
-
-export type MeasurementAnchor = {
-  offsetMm: number;
-  orientation: MeasurementAnchorOrientation;
-};
-
-export type MeasurementAnchors = Record<MeasurementKey, MeasurementAnchor>;
-
-export type MeasurementAnchorsPatch = Partial<Record<MeasurementKey, Partial<MeasurementAnchor>>>;
 
 export type BaseObj = {
   id: string;
@@ -31,7 +18,6 @@ export type BaseObj = {
   rotationDeg: number;
   locked: boolean;
   measurements: MeasurementState;
-  measurementAnchors: MeasurementAnchors;
 };
 
 export type RampObj = BaseObj & {
@@ -54,5 +40,4 @@ export type Snapshot = {
   snapOn: boolean;
   objects: Object2D[];
   selectedId: string | null;
-  selectedMeasurementKey: MeasurementKey | null;
 };
