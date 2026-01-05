@@ -3,13 +3,11 @@ import { newLandingAt, newRampAt } from "../model/defaults";
 import { updateObject, type ObjectPatch } from "../model/objectUpdate";
 import { Snapshot, Tool } from "../model/types";
 import { centerFromTopLeftMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../model/geometry";
-import { generateDimensions } from "../model/geometry/dimensions";
 import { loadProject, saveProject } from "../model/storage";
 import { GRID_STEP_MM, snapMm } from "../model/units";
 import { HistoryState, canRedo, canUndo, commitSnapshot, createHistoryState, redo, replacePresent, undo } from "../model/history";
 import Canvas2D from "../ui/canvas/Canvas2D";
 import Preview3D from "../ui/preview/Preview3D";
-import { createPreviewDimensionOverlay } from "../ui/preview/dimensions";
 import Inspector from "../ui/layout/Inspector";
 import TopBar from "../ui/layout/TopBar";
 import Toolbox from "../ui/layout/Toolbox";
@@ -41,9 +39,6 @@ export default function AppShell() {
   const { objects, selectedId, selectedMeasurementKey, snapOn } = history.present;
 
   const saveTimerRef = useRef<number | null>(null);
-
-  const dimensions = useMemo(() => generateDimensions(objects), [objects]);
-  const previewDimensions = useMemo(() => createPreviewDimensionOverlay(dimensions), [dimensions]);
 
   useEffect(() => {
     const restored = loadProject();
@@ -294,7 +289,6 @@ export default function AppShell() {
               activeTool={activeTool}
               snapOn={snapOn}
               objects={objects}
-              dimensions={dimensions}
               selectedId={selectedId}
               selectedMeasurementKey={selectedMeasurementKey}
               onSelect={handleSelect}
@@ -306,7 +300,7 @@ export default function AppShell() {
               onSetActiveTool={setActiveTool}
             />
           ) : (
-            <Preview3D dimensions={previewDimensions} />
+            <Preview3D />
           )}
         </main>
         <aside className="ob-right ob-panel">
