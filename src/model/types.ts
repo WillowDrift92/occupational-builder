@@ -36,8 +36,12 @@ export type LandingObj = BaseObj & {
 
 export type Object2D = RampObj | LandingObj;
 
+export type SnapIncrementMm = 1 | 10 | 100 | 1000;
+
 export type Snapshot = {
-  snapOn: boolean;
+  snapToGrid: boolean;
+  snapToObjects: boolean;
+  snapIncrementMm: SnapIncrementMm;
   objects: Object2D[];
   selectedId: string | null;
 };
