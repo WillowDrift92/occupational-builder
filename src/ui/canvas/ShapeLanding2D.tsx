@@ -1,4 +1,6 @@
+import { Ref } from "react";
 import { Group, Rect } from "react-konva";
+import type { Group as KonvaGroup } from "konva/lib/Group";
 import { LandingObj, Tool } from "../../model/types";
 import { mmToPx } from "../../model/units";
 
@@ -15,6 +17,10 @@ type Props = {
   onMouseLeave?: () => void;
   onDragStart?: () => void;
   onDragEnd?: (evt: any) => void;
+  onTransformStart?: (evt: any) => void;
+  onTransformEnd?: (evt: any) => void;
+  onTransform?: (evt: any) => void;
+  groupRef?: Ref<KonvaGroup>;
 };
 
 export default function ShapeLanding2D({
@@ -30,6 +36,10 @@ export default function ShapeLanding2D({
   onMouseLeave,
   onDragStart,
   onDragEnd,
+  onTransformStart,
+  onTransformEnd,
+  onTransform,
+  groupRef,
 }: Props) {
   const widthPx = mmToPx(obj.lengthMm);
   const heightPx = mmToPx(obj.widthMm);
@@ -59,6 +69,10 @@ export default function ShapeLanding2D({
       dragBoundFunc={dragBoundFunc}
       rotation={obj.rotationDeg}
       listening={!ghost}
+      onTransformStart={onTransformStart}
+      onTransformEnd={onTransformEnd}
+      onTransform={onTransform}
+      ref={groupRef}
     >
       <Rect
         x={rectX}
