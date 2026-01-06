@@ -15,6 +15,10 @@ type Props = {
   onMouseLeave?: () => void;
   onDragStart?: () => void;
   onDragEnd?: (evt: any) => void;
+  onTransformStart?: () => void;
+  onTransform?: (evt: any) => void;
+  onTransformEnd?: (evt: any) => void;
+  nodeRef?: (node: any) => void;
 };
 
 export default function ShapeLanding2D({
@@ -30,6 +34,10 @@ export default function ShapeLanding2D({
   onMouseLeave,
   onDragStart,
   onDragEnd,
+  onTransformStart,
+  onTransform,
+  onTransformEnd,
+  nodeRef,
 }: Props) {
   const widthPx = mmToPx(obj.lengthMm);
   const heightPx = mmToPx(obj.widthMm);
@@ -58,6 +66,10 @@ export default function ShapeLanding2D({
       onDragEnd={onDragEnd}
       dragBoundFunc={dragBoundFunc}
       rotation={obj.rotationDeg}
+      onTransformStart={onTransformStart}
+      onTransform={onTransform}
+      onTransformEnd={onTransformEnd}
+      ref={nodeRef}
       listening={!ghost}
     >
       <Rect

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Group, Line, Arrow } from "react-konva";
 import { getRampOutlinePointsMm, getRampSeamLinesMm } from "../../model/geometry";
 import { RampObj, Tool } from "../../model/types";
@@ -16,6 +17,10 @@ type Props = {
   onMouseLeave?: () => void;
   onDragStart?: () => void;
   onDragEnd?: (evt: any) => void;
+  onTransformStart?: () => void;
+  onTransform?: (evt: any) => void;
+  onTransformEnd?: (evt: any) => void;
+  nodeRef?: (node: any) => void;
 };
 
 export default function ShapeRamp2D({
@@ -31,7 +36,26 @@ export default function ShapeRamp2D({
   onMouseLeave,
   onDragStart,
   onDragEnd,
+  onTransformStart,
+  onTransform,
+  onTransformEnd,
+  nodeRef,
 }: Props) {
+  const groupRef = useRef<any>(null);
+
+  useEffect(() => {
+    const node = groupRef.current as any;
+    if (!node) return;
+    const halfLengthPx = mmToPx(obj.runMm) / 2;
+    const halfWidthPx = mmToPx(obj.widthMm) / 2;
+    node.getSelfRect = () => ({
+      x: -halfLengthPx,
+      y: -halfWidthPx,
+      width: halfLengthPx * 2,
+      height: halfWidthPx * 2,
+    });
+  }, [obj.runMm, obj.widthMm]);
+
   const fill = ghost ? "rgba(59,130,246,0.25)" : "#e5e7eb";
   const stroke =
     activeTool === "delete" && hover
@@ -70,6 +94,13 @@ export default function ShapeRamp2D({
       onDragEnd={onDragEnd}
       dragBoundFunc={dragBoundFunc}
       rotation={obj.rotationDeg}
+      onTransformStart={onTransformStart}
+      onTransform={onTransform}
+      onTransformEnd={onTransformEnd}
+      ref={(node) => {
+        groupRef.current = node;
+        nodeRef?.(node);
+      }}
       listening={!ghost}
     >
       <Line
