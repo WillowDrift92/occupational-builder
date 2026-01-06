@@ -1,6 +1,6 @@
 # Occupational Builder
 
-**Build version:** v0.5.1  
+**Build version:** v0.4.5  
 **Status:** Active development (v1 scope)
 
 Occupational Builder is a **design-only, browser-based ramp and platform builder** for occupational access scenarios.  
@@ -169,9 +169,6 @@ Parameters:
 ---
 
 ## Changelog
-
-### v0.5.1
-- Added 2D object resizing handles with snap-to-increment support.
 
 ### v0.5.0
 - Split snapping controls into separate grid/object toggles with configurable 1/10/100/1000mm increments plus status readouts.

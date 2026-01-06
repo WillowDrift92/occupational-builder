@@ -1,6 +1,4 @@
-import { Ref } from "react";
 import { Group, Line, Arrow } from "react-konva";
-import type { Group as KonvaGroup } from "konva/lib/Group";
 import { getRampOutlinePointsMm, getRampSeamLinesMm } from "../../model/geometry";
 import { RampObj, Tool } from "../../model/types";
 import { mmToPx } from "../../model/units";
@@ -18,10 +16,6 @@ type Props = {
   onMouseLeave?: () => void;
   onDragStart?: () => void;
   onDragEnd?: (evt: any) => void;
-  onTransformStart?: (evt: any) => void;
-  onTransformEnd?: (evt: any) => void;
-  onTransform?: (evt: any) => void;
-  groupRef?: Ref<KonvaGroup>;
 };
 
 export default function ShapeRamp2D({
@@ -37,10 +31,6 @@ export default function ShapeRamp2D({
   onMouseLeave,
   onDragStart,
   onDragEnd,
-  onTransformStart,
-  onTransformEnd,
-  onTransform,
-  groupRef,
 }: Props) {
   const fill = ghost ? "rgba(59,130,246,0.25)" : "#e5e7eb";
   const stroke =
@@ -81,10 +71,6 @@ export default function ShapeRamp2D({
       dragBoundFunc={dragBoundFunc}
       rotation={obj.rotationDeg}
       listening={!ghost}
-      onTransformStart={onTransformStart}
-      onTransformEnd={onTransformEnd}
-      onTransform={onTransform}
-      ref={groupRef}
     >
       <Line
         points={outlinePointsPx}
