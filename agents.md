@@ -15,6 +15,12 @@
 - Do not mention PRs unless the user explicitly asks.
 - Keep changes small and TypeScript-safe.
 
+## Coordinate Integrity Rule
+- Coordinate Integrity Rule: The workspace operates in a millimeter (mm) coordinate system.
+  - Always locate the state manager to see how objects are stored.
+  - Always locate conversion helpers before modifying any react-konva or three.js components.
+  - Never hardcode pixel values for geometry.
+
 ## Versioning and changelog policy (mandatory)
 
 ### Source of truth
