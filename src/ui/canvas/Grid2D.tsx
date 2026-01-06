@@ -1,32 +1,32 @@
 import { useMemo } from "react";
 import { Group, Line, Rect } from "react-konva";
-import { GRID_STEP_MM, mmToPx } from "../../model/units";
+import { mmToPx } from "../../model/units";
 
 type Grid2DProps = {
   cameraScale: number;
   workspaceSizeMm: number;
+  gridStepMm: number;
 };
-
-const MINOR_SPACING_MM = GRID_STEP_MM;
-const MAJOR_SPACING_MM = GRID_STEP_MM * 10;
-const SUPER_MAJOR_SPACING_MM = GRID_STEP_MM * 50;
-const SUPER_MAJOR_ALT_SPACING_MM = GRID_STEP_MM * 100;
 
 const toScreenSpacing = (stepMm: number, cameraScale: number) => mmToPx(stepMm) * cameraScale;
 
-export default function Grid2D({ cameraScale, workspaceSizeMm }: Grid2DProps) {
+export default function Grid2D({ cameraScale, workspaceSizeMm, gridStepMm }: Grid2DProps) {
   const halfWorkspacePx = mmToPx(workspaceSizeMm / 2);
 
   const { background, lines } = useMemo(() => {
     const nodes: JSX.Element[] = [];
-    const drawMinor = toScreenSpacing(MINOR_SPACING_MM, cameraScale) >= 6;
-    const drawMajor = toScreenSpacing(MAJOR_SPACING_MM, cameraScale) >= 10;
+    const minorSpacingMm = gridStepMm;
+    const majorSpacingMm = gridStepMm * 10;
+    const baseSuperMajorSpacingMm = gridStepMm * 50;
+    const baseSuperMajorAltSpacingMm = gridStepMm * 100;
+    const drawMinor = toScreenSpacing(minorSpacingMm, cameraScale) >= 6;
+    const drawMajor = toScreenSpacing(majorSpacingMm, cameraScale) >= 10;
 
     const superMajorSpacingMm =
-      !drawMajor && toScreenSpacing(SUPER_MAJOR_SPACING_MM, cameraScale) >= 10
-        ? SUPER_MAJOR_SPACING_MM
-        : !drawMajor && toScreenSpacing(SUPER_MAJOR_ALT_SPACING_MM, cameraScale) >= 10
-          ? SUPER_MAJOR_ALT_SPACING_MM
+      !drawMajor && toScreenSpacing(baseSuperMajorSpacingMm, cameraScale) >= 10
+        ? baseSuperMajorSpacingMm
+        : !drawMajor && toScreenSpacing(baseSuperMajorAltSpacingMm, cameraScale) >= 10
+          ? baseSuperMajorAltSpacingMm
           : null;
 
     const strokeWidth = 1 / cameraScale;
@@ -61,10 +61,10 @@ export default function Grid2D({ cameraScale, workspaceSizeMm }: Grid2DProps) {
     };
 
     if (drawMinor) {
-      addLines(MINOR_SPACING_MM, "minor", "rgba(148, 163, 184, 0.16)");
+      addLines(minorSpacingMm, "minor", "rgba(148, 163, 184, 0.16)");
     }
     if (drawMajor) {
-      addLines(MAJOR_SPACING_MM, "major", "rgba(148, 163, 184, 0.32)");
+      addLines(majorSpacingMm, "major", "rgba(148, 163, 184, 0.32)");
     } else if (superMajorSpacingMm) {
       addLines(superMajorSpacingMm, "super", "rgba(148, 163, 184, 0.38)");
     }
@@ -85,7 +85,7 @@ export default function Grid2D({ cameraScale, workspaceSizeMm }: Grid2DProps) {
       ),
       lines: nodes,
     };
-  }, [cameraScale, halfWorkspacePx]);
+  }, [cameraScale, gridStepMm, halfWorkspacePx]);
 
   return (
     <Group listening={false} clipX={-halfWorkspacePx} clipY={-halfWorkspacePx} clipWidth={halfWorkspacePx * 2} clipHeight={halfWorkspacePx * 2}>

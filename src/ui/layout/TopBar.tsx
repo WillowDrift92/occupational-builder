@@ -4,7 +4,8 @@ import { EditMode } from "../../app/AppShell";
 type TopBarProps = {
   mode: EditMode;
   onSetMode: (mode: EditMode) => void;
-  snapOn: boolean;
+  snapLabel: string;
+  snapActive: boolean;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
@@ -14,7 +15,8 @@ type TopBarProps = {
 export default function TopBar({
   mode,
   onSetMode,
-  snapOn,
+  snapLabel,
+  snapActive,
   canUndo,
   canRedo,
   onUndo,
@@ -34,8 +36,8 @@ export default function TopBar({
         </div>
       </div>
       <div className="top-bar__actions">
-        <div className={`top-bar__snap ${snapOn ? "top-bar__snap--on" : "top-bar__snap--off"}`} aria-live="polite">
-          Snap {snapOn ? "ON" : "OFF"}
+        <div className={`top-bar__snap ${snapActive ? "top-bar__snap--on" : "top-bar__snap--off"}`} aria-live="polite">
+          Snap: {snapLabel}
         </div>
         <div className="top-bar__modes">
           <button

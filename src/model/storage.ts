@@ -6,16 +6,19 @@ import {
   DEFAULT_RAMP_RUN_MM,
   DEFAULT_RAMP_WIDTH_MM,
 } from "./defaults";
-import { LandingObj, MeasurementKey, MeasurementState, Object2D, RampObj, Tool } from "./types";
+import { LandingObj, MeasurementKey, MeasurementState, Object2D, RampObj, SnapIncrementMm, Tool } from "./types";
+import { DEFAULT_SNAP_INCREMENT_MM, SNAP_INCREMENT_OPTIONS } from "./units";
 
 export const STORAGE_KEY = "occupational_builder_v1";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export type PersistedProject = {
   mode: "2d" | "3d";
   activeTool: Tool;
-  snapOn: boolean;
+  snapToGrid: boolean;
+  snapToObjects: boolean;
+  snapIncrementMm: SnapIncrementMm;
   objects: Object2D[];
   selectedId: string | null;
 };
@@ -38,6 +41,9 @@ const isTool = (value: unknown): value is Tool =>
 const isLegacyTool = (value: unknown): value is "platform" => value === "platform";
 
 const measurementKeys: MeasurementKey[] = ["L1", "L2", "W1", "W2", "H", "E"];
+
+const isSnapIncrement = (value: unknown): value is SnapIncrementMm =>
+  typeof value === "number" && SNAP_INCREMENT_OPTIONS.includes(value as SnapIncrementMm);
 
 const normaliseMeasurements = (value: any, elevationMm: number): MeasurementState => {
   const fallback = (defaultValue: boolean): boolean => (typeof defaultValue === "boolean" ? defaultValue : true);
@@ -150,10 +156,7 @@ const cloneObject = (obj: Object2D): Object2D =>
     : { ...obj, measurements: cloneMeasurements(obj.measurements) };
 
 const isPersistedEnvelope = (value: any): value is PersistedEnvelope =>
-  value &&
-  value.schemaVersion === SCHEMA_VERSION &&
-  isNumber(value.savedAt) &&
-  value.data;
+  value && isNumber(value.schemaVersion) && isNumber(value.savedAt) && value.data;
 
 const normaliseTool = (value: any): Tool | null => {
   if (isTool(value)) return value;
@@ -161,12 +164,23 @@ const normaliseTool = (value: any): Tool | null => {
   return null;
 };
 
-const normaliseProject = (value: any): PersistedProject | null => {
+const normaliseProject = (value: any, schemaVersion: number): PersistedProject | null => {
   if (!value || !isMode(value.mode)) return null;
   const activeTool = normaliseTool(value.activeTool);
   if (!activeTool) return null;
-  if (!isBoolean(value.snapOn)) return null;
   if (!Array.isArray(value.objects)) return null;
+
+  const snapToGrid =
+    schemaVersion <= 1 ? Boolean(value.snapOn) : isBoolean(value.snapToGrid) ? value.snapToGrid : true;
+  const snapToObjects =
+    schemaVersion <= 1 ? Boolean(value.snapOn) : isBoolean(value.snapToObjects) ? value.snapToObjects : true;
+
+  const snapIncrementMm =
+    schemaVersion <= 1
+      ? DEFAULT_SNAP_INCREMENT_MM
+      : isSnapIncrement(value.snapIncrementMm)
+        ? value.snapIncrementMm
+        : DEFAULT_SNAP_INCREMENT_MM;
 
   const objects = value.objects
     .map(toObject2D)
@@ -178,7 +192,9 @@ const normaliseProject = (value: any): PersistedProject | null => {
   return {
     mode: value.mode,
     activeTool,
-    snapOn: value.snapOn,
+    snapToGrid,
+    snapToObjects,
+    snapIncrementMm,
     objects,
     selectedId,
   };
@@ -214,7 +230,8 @@ export function loadProject(): PersistedProject | null {
   try {
     const parsed = JSON.parse(raw);
     if (!isPersistedEnvelope(parsed)) return null;
-    const normalised = normaliseProject(parsed.data);
+    if (parsed.schemaVersion > SCHEMA_VERSION) return null;
+    const normalised = normaliseProject(parsed.data, parsed.schemaVersion);
     if (!normalised) return null;
     return cloneProject(normalised);
   } catch (error) {

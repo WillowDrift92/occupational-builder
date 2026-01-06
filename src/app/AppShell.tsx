@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { newLandingAt, newRampAt } from "../model/defaults";
 import { updateObject, type ObjectPatch } from "../model/objectUpdate";
-import { Snapshot, Tool } from "../model/types";
+import { Snapshot, SnapIncrementMm, Tool } from "../model/types";
 import { centerFromTopLeftMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../model/geometry";
 import { loadProject, saveProject } from "../model/storage";
-import { GRID_STEP_MM, snapMm } from "../model/units";
+import { DEFAULT_SNAP_INCREMENT_MM, snapMm } from "../model/units";
 import { HistoryState, canRedo, canUndo, commitSnapshot, createHistoryState, redo, replacePresent, undo } from "../model/history";
 import Canvas2D from "../ui/canvas/Canvas2D";
 import Preview3D from "../ui/preview/Preview3D";
@@ -22,10 +22,10 @@ const statusText: Record<Tool, string> = {
   delete: "Delete: Click an object to delete, or Esc to cancel.",
 };
 
-const FINE_NUDGE_MM = 10;
-
 const defaultSnapshot: Snapshot = {
-  snapOn: true,
+  snapToGrid: true,
+  snapToObjects: true,
+  snapIncrementMm: DEFAULT_SNAP_INCREMENT_MM,
   objects: [],
   selectedId: null,
 };
@@ -35,7 +35,7 @@ export default function AppShell() {
   const [activeTool, setActiveTool] = useState<Tool>("none");
   const [history, setHistory] = useState<HistoryState>(() => createHistoryState(defaultSnapshot));
 
-  const { objects, selectedId, snapOn } = history.present;
+  const { objects, selectedId, snapToGrid, snapToObjects, snapIncrementMm } = history.present;
 
   const saveTimerRef = useRef<number | null>(null);
 
@@ -47,7 +47,9 @@ export default function AppShell() {
       setHistory(
         createHistoryState({
           objects: restored.objects,
-          snapOn: restored.snapOn,
+          snapToGrid: restored.snapToGrid,
+          snapToObjects: restored.snapToObjects,
+          snapIncrementMm: restored.snapIncrementMm,
           selectedId: restored.selectedId,
         }),
       );
@@ -68,13 +70,13 @@ export default function AppShell() {
       window.clearTimeout(saveTimerRef.current);
     }
 
-    const snapshot = { mode, activeTool, objects, snapOn, selectedId };
+    const snapshot = { mode, activeTool, objects, snapToGrid, snapToObjects, snapIncrementMm, selectedId };
 
     saveTimerRef.current = window.setTimeout(() => {
       saveProject(snapshot);
       saveTimerRef.current = null;
     }, 200);
-  }, [mode, activeTool, objects, snapOn, selectedId]);
+  }, [mode, activeTool, objects, snapIncrementMm, snapToGrid, snapToObjects, selectedId]);
 
   const applySnapshot = useCallback(
     (updater: (snapshot: Snapshot) => Snapshot, commitChange = false) => {
@@ -95,8 +97,16 @@ export default function AppShell() {
     setHistory((current) => (canRedo(current) ? redo(current) : current));
   }, []);
 
-  const handleToggleSnap = () => {
-    applySnapshot((present) => ({ ...present, snapOn: !present.snapOn }), true);
+  const handleToggleSnapToGrid = () => {
+    applySnapshot((present) => ({ ...present, snapToGrid: !present.snapToGrid }), true);
+  };
+
+  const handleToggleSnapToObjects = () => {
+    applySnapshot((present) => ({ ...present, snapToObjects: !present.snapToObjects }), true);
+  };
+
+  const handleSetSnapIncrement = (stepMm: SnapIncrementMm) => {
+    applySnapshot((present) => ({ ...present, snapIncrementMm: stepMm }), true);
   };
 
   const handleSetMode = (nextMode: EditMode) => {
@@ -111,6 +121,12 @@ export default function AppShell() {
   );
 
   const status = useMemo(() => statusText[activeTool], [activeTool]);
+  const snapStatus = useMemo(() => {
+    if (snapToGrid && snapToObjects) return `Grid (${snapIncrementMm}mm) + Objects`;
+    if (snapToGrid) return `Grid (${snapIncrementMm}mm)`;
+    if (snapToObjects) return "Objects only";
+    return "Free (1mm)";
+  }, [snapIncrementMm, snapToGrid, snapToObjects]);
 
   const handlePlaceAt = useCallback(
     (tool: Tool, xMm: number, yMm: number) => {
@@ -168,7 +184,8 @@ export default function AppShell() {
         if (!present.selectedId) return present;
         const selected = present.objects.find((obj) => obj.id === present.selectedId);
         if (!selected || selected.locked) return present;
-        const startingRotation = present.snapOn ? Math.round(selected.rotationDeg / 90) * 90 : selected.rotationDeg;
+        const hasSnap = present.snapToGrid || present.snapToObjects;
+        const startingRotation = hasSnap ? Math.round(selected.rotationDeg / 90) * 90 : selected.rotationDeg;
         const nextRotation = startingRotation + delta;
         return updateObject(present, selected.id, { rotationDeg: nextRotation });
       }, true);
@@ -225,16 +242,18 @@ export default function AppShell() {
           if (!selected || selected.locked) return present;
           const bbox = getObjectBoundingBoxMm(selected);
           const currentTopLeft = topLeftFromCenterMm({ xMm: selected.xMm, yMm: selected.yMm }, bbox);
-          const nudgeStep = present.snapOn ? GRID_STEP_MM : FINE_NUDGE_MM;
+          const nudgeStep = present.snapToGrid ? present.snapIncrementMm : 1;
           const offset = { xMm: 0, yMm: 0 };
           if (event.key === "ArrowUp") offset.yMm = -nudgeStep;
           if (event.key === "ArrowDown") offset.yMm = nudgeStep;
           if (event.key === "ArrowLeft") offset.xMm = -nudgeStep;
           if (event.key === "ArrowRight") offset.xMm = nudgeStep;
           const nextTopLeft = { xMm: currentTopLeft.xMm + offset.xMm, yMm: currentTopLeft.yMm + offset.yMm };
-          const snappedTopLeft = present.snapOn
-            ? { xMm: snapMm(nextTopLeft.xMm), yMm: snapMm(nextTopLeft.yMm) }
-            : nextTopLeft;
+          const snapStepMm = present.snapToGrid ? present.snapIncrementMm : 1;
+          const snappedTopLeft = {
+            xMm: snapMm(nextTopLeft.xMm, snapStepMm),
+            yMm: snapMm(nextTopLeft.yMm, snapStepMm),
+          };
           const nextCenter = centerFromTopLeftMm(snappedTopLeft, bbox);
           return updateObject(present, selected.id, { xMm: nextCenter.xMm, yMm: nextCenter.yMm });
         }, true);
@@ -255,7 +274,8 @@ export default function AppShell() {
         <TopBar
           mode={mode}
           onSetMode={handleSetMode}
-          snapOn={snapOn}
+          snapLabel={snapStatus}
+          snapActive={snapToGrid || snapToObjects}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndoAction}
@@ -266,8 +286,12 @@ export default function AppShell() {
         <aside className="ob-left ob-panel">
           <Toolbox
             activeTool={activeTool}
-            snapOn={snapOn}
-            onToggleSnap={handleToggleSnap}
+            snapToGrid={snapToGrid}
+            snapToObjects={snapToObjects}
+            snapIncrementMm={snapIncrementMm}
+            onToggleSnapToGrid={handleToggleSnapToGrid}
+            onToggleSnapToObjects={handleToggleSnapToObjects}
+            onSetSnapIncrement={handleSetSnapIncrement}
             onSetActiveTool={setActiveTool}
           />
         </aside>
@@ -275,7 +299,9 @@ export default function AppShell() {
           {mode === "2d" ? (
             <Canvas2D
               activeTool={activeTool}
-              snapOn={snapOn}
+              snapToGrid={snapToGrid}
+              snapToObjects={snapToObjects}
+              snapIncrementMm={snapIncrementMm}
               objects={objects}
               selectedId={selectedId}
               onSelect={handleSelect}
@@ -295,6 +321,7 @@ export default function AppShell() {
       </div>
       <div className="ob-statusBar">
         <div className="ob-statusBar__mode">Mode: {activeTool.toUpperCase()}</div>
+        <div className="ob-statusBar__snap">Snap: {snapStatus}</div>
         <div className="ob-statusBar__hint">{status}</div>
       </div>
     </div>

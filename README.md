@@ -170,6 +170,10 @@ Parameters:
 
 ## Changelog
 
+### v0.5.0
+- Split snapping controls into separate grid/object toggles with configurable 1/10/100/1000mm increments plus status readouts.
+- Updated snapping logic and autosave to honour the selected increment, prioritise object magnetism, and keep grid visuals aligned for large steps.
+
 ### v0.4.5
 - Locked the document and app shell to the viewport with hidden overflow (with clip where supported) to remove page scrollbars while preserving scrolling within the left and right panels.
 
