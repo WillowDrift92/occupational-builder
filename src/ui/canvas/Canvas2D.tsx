@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Circle, Group, Layer, Line, Rect, Stage, Text, Transformer } from "react-konva";
-import type { Group as KonvaGroup } from "konva/lib/Group";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { BaseObj, LandingObj, Object2D, RampObj, SnapIncrementMm, Tool } from "../../model/types";
 import { newLandingAt, newRampAt } from "../../model/defaults";
 import { centerFromTopLeftMm, getDefaultBoundingBoxMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
@@ -73,7 +72,6 @@ const MAX_SCALE = 10;
 const VISIBLE_RATIO = 0.6;
 const WORKSPACE_HALF_PX = mmToPx(HALF_WORKSPACE_MM);
 const MIN_INCREMENT_MM = 1;
-const MIN_SIZE_MM = 100;
 
 const getAabbMm = (obj: Object2D, centerOverride?: PointMm): AabbMm => {
   const size = getObjectBoundingBoxMm(obj);
@@ -189,25 +187,6 @@ export default function Canvas2D({
   const [spacePanning, setSpacePanning] = useState(false);
   const isPanningRef = useRef(false);
   const lastPanRef = useRef<ScreenPoint | null>(null);
-  const transformerRef = useRef<any>(null);
-  const [selectedNode, setSelectedNode] = useState<KonvaGroup | null>(null);
-
-  const selectedObject = useMemo(
-    () => (selectedId ? objects.find((obj) => obj.id === selectedId) ?? null : null),
-    [objects, selectedId],
-  );
-
-  useEffect(() => {
-    const transformer = transformerRef.current;
-    if (!transformer) return;
-
-    if (selectedObject && !selectedObject.locked && selectedNode) {
-      transformer.nodes([selectedNode]);
-    } else {
-      transformer.nodes([]);
-    }
-    transformer.getLayer()?.batchDraw();
-  }, [selectedNode, selectedObject]);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -348,66 +327,6 @@ export default function Canvas2D({
   const clampedSnapY =
     snapGuide.snappedY !== undefined ? clamp(mmToPx(snapGuide.snappedY), -WORKSPACE_HALF_PX, WORKSPACE_HALF_PX) : null;
   const snapPointRadius = camera ? 4 / camera.scale : 4;
-
-  const getObjectSizeMm = useCallback((obj: Object2D) => {
-    const baseLength = obj.kind === "ramp" ? obj.runMm : obj.lengthMm;
-    return {
-      lengthMm: Math.max(baseLength, MIN_INCREMENT_MM),
-      widthMm: Math.max(obj.widthMm, MIN_INCREMENT_MM),
-    };
-  }, []);
-
-  const snapSizeMm = useCallback(
-    (size: number) => Math.max(MIN_SIZE_MM, snapMm(size, snapIncrementMm)),
-    [snapIncrementMm],
-  );
-
-  const transformerBoundBox = useCallback(
-    (oldBox: any, newBox: any) => {
-      if (!selectedObject || selectedObject.locked) return oldBox;
-      const { lengthMm, widthMm } = getObjectSizeMm(selectedObject);
-      const scaleX = newBox.width / oldBox.width;
-      const scaleY = newBox.height / oldBox.height;
-      const snappedLength = snapSizeMm(lengthMm * scaleX);
-      const snappedWidth = snapSizeMm(widthMm * scaleY);
-      const nextScaleX = snappedLength / lengthMm;
-      const nextScaleY = snappedWidth / widthMm;
-      return {
-        ...newBox,
-        width: oldBox.width * nextScaleX,
-        height: oldBox.height * nextScaleY,
-      };
-    },
-    [getObjectSizeMm, selectedObject, snapSizeMm],
-  );
-
-  const handleResizeEnd = useCallback(
-    (node: KonvaGroup, obj: Object2D) => {
-      const { lengthMm, widthMm } = getObjectSizeMm(obj);
-      const snappedLength = snapSizeMm(lengthMm * node.scaleX());
-      const snappedWidth = snapSizeMm(widthMm * node.scaleY());
-      const nextXMm = pxToMm(node.x());
-      const nextYMm = pxToMm(node.y());
-
-      node.scaleX(1);
-      node.scaleY(1);
-
-      if (obj.kind === "ramp") {
-        onUpdateObject(
-          obj.id,
-          { lengthMm: snappedLength, runMm: snappedLength, widthMm: snappedWidth, xMm: nextXMm, yMm: nextYMm },
-          true,
-        );
-        return;
-      }
-      onUpdateObject(
-        obj.id,
-        { lengthMm: snappedLength, widthMm: snappedWidth, xMm: nextXMm, yMm: nextYMm },
-        true,
-      );
-    },
-    [getObjectSizeMm, onUpdateObject, snapSizeMm],
-  );
 
   const getPlacementCentreFromAnchor = (tool: Tool, anchor: PointMm): PointMm | null => {
     const bbox = getDefaultBoundingBoxMm(tool);
@@ -702,24 +621,11 @@ export default function Canvas2D({
     const isSelected = obj.id === selectedId;
     const isHover = obj.id === hoverId;
     const draggable = isSelected && !obj.locked && !spacePanning;
-    const canTransform = isSelected && !obj.locked && !spacePanning;
-    const groupRef = isSelected ? (node: KonvaGroup | null) => setSelectedNode(node) : undefined;
     const dragBoundFunc = (pos: any) => {
       if (!camera) return pos;
       const proposedCentre = screenToWorldMm(pos, camera);
       const snappedCentre = getObjectSnap(obj, proposedCentre);
       return worldToScreen(snappedCentre, camera);
-    };
-    const handleTransformStart = () => {
-      if (stageRef.current) {
-        stageRef.current.container().style.cursor = "nwse-resize";
-      }
-    };
-    const handleTransformEndEvent = (evt: any) => {
-      if (stageRef.current) {
-        stageRef.current.container().style.cursor = "";
-      }
-      handleResizeEnd(evt.target as KonvaGroup, obj);
     };
     const hoverHandlers = {
       onMouseEnter: () => setHoverId(obj.id),
@@ -737,9 +643,6 @@ export default function Canvas2D({
         onPointerDown: (evt: any) => handleObjectPointerDown(evt, obj),
         onDragStart: handleObjectDragStart,
         onDragEnd: (evt: any) => handleObjectDragEnd(evt, obj),
-        onTransformStart: canTransform ? handleTransformStart : undefined,
-        onTransformEnd: canTransform ? handleTransformEndEvent : undefined,
-        groupRef,
         ...hoverHandlers,
       };
       return <ShapeRamp2D {...rampProps} />;
@@ -755,9 +658,6 @@ export default function Canvas2D({
       onPointerDown: (evt: any) => handleObjectPointerDown(evt, obj),
       onDragStart: handleObjectDragStart,
       onDragEnd: (evt: any) => handleObjectDragEnd(evt, obj),
-      onTransformStart: canTransform ? handleTransformStart : undefined,
-      onTransformEnd: canTransform ? handleTransformEndEvent : undefined,
-      groupRef,
       ...hoverHandlers,
     };
     return <ShapeLanding2D {...landingProps} />;
@@ -787,18 +687,7 @@ export default function Canvas2D({
             </Layer>
 
             <Layer>
-              <Group {...worldGroupProps}>
-                {objectNodes}
-                <Transformer
-                  ref={transformerRef}
-                  rotateEnabled={false}
-                  enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]}
-                  boundBoxFunc={transformerBoundBox}
-                  visible={Boolean(selectedObject && !selectedObject.locked)}
-                  flipEnabled={false}
-                  anchorSize={8}
-                />
-              </Group>
+              <Group {...worldGroupProps}>{objectNodes}</Group>
             </Layer>
 
             <Layer listening={false}>
