@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
-import { BaseObj, LandingObj, MeasurementKey, Object2D, RampObj, SnapIncrementMm, Tool } from "../../model/types";
+import { BaseObj, LandingObj, Object2D, RampObj, SnapIncrementMm, Tool } from "../../model/types";
 import { newLandingAt, newRampAt } from "../../model/defaults";
 import { centerFromTopLeftMm, getDefaultBoundingBoxMm, getObjectBoundingBoxMm, topLeftFromCenterMm } from "../../model/geometry";
 import { mmToPx, pxToMm, snapMm } from "../../model/units";
@@ -874,10 +874,6 @@ export default function Canvas2D({
     return { text: label, x: pointer.x + 10, y: pointer.y + 12 };
   }, [activeTool, pointer]);
 
-  const handleMeasurementOffsetChange = (id: string, key: MeasurementKey, offsetMm: number) => {
-    onUpdateObject(id, { measurementOffsets: { [key]: offsetMm } } as Partial<Object2D>, true);
-  };
-
   const objectNodes = objects.map((obj) => {
     const isSelected = obj.id === selectedId;
     const isHover = obj.id === hoverId;
@@ -899,10 +895,8 @@ export default function Canvas2D({
         selected: isSelected,
         hover: isHover,
         activeTool,
-        snapIncrementMm,
         draggable,
         dragBoundFunc,
-        onMeasurementOffsetChange: (key: MeasurementKey, offsetMm: number) => handleMeasurementOffsetChange(obj.id, key, offsetMm),
         onPointerDown: (evt: any) => handleObjectPointerDown(evt, obj),
         onDragStart: () => handleObjectDragStart(obj),
         onDragEnd: (evt: any) => handleObjectDragEnd(evt, obj),
@@ -916,10 +910,8 @@ export default function Canvas2D({
       selected: isSelected,
       hover: isHover,
       activeTool,
-      snapIncrementMm,
       draggable,
       dragBoundFunc,
-      onMeasurementOffsetChange: (key: MeasurementKey, offsetMm: number) => handleMeasurementOffsetChange(obj.id, key, offsetMm),
       onPointerDown: (evt: any) => handleObjectPointerDown(evt, obj),
       onDragStart: () => handleObjectDragStart(obj),
       onDragEnd: (evt: any) => handleObjectDragEnd(evt, obj),
